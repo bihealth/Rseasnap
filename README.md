@@ -28,6 +28,13 @@ library(devtools)
 install_git(...)
 ```
 
+Alternatively, clone the git repo and install from the clone directory,
+e.g.
+
+``` r
+system("git clone git@cubi-gitlab.bihealth.org:january.weiner/Rseasnap.git")
+devtools::install_git("Rseasnap")
+
 ## Example
 
 This is a basic example which shows you how to solve a common problem:

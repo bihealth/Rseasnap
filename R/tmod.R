@@ -4,8 +4,10 @@
 #'
 #' Using precomputed mappings, map PrimaryIDs (usually ENSEMBL IDs) to the
 #' IDs of the desired database.
+#' @param x an object of class seasnap_DE_pipeline
 #' @param ids character vector of PrimaryIDs
 #' @param tmod_dbs_mapping_obj the object returned by `get_object(x, "tmod_dbs", "mapping.rds")`
+#' @param dbname string, name of the database to use
 #' @return a named character vector of the same length and order as `ids`
 #' @export
 tmod_db_map_ids <- function(x, ids, dbname, tmod_dbs_mapping_obj=NULL) {
@@ -53,6 +55,14 @@ tmod_db_map_ids <- function(x, ids, dbname, tmod_dbs_mapping_obj=NULL) {
 #'
 #' Since loading of objects can take time, the larger objects (tmod dbs,
 #' contrasts, precomputed gene lists) can be provided as optional named arguments.
+#' It is usually much more efficient to get the tmod database object first
+#' and pass it as an optional argument than to load it each time this function
+#' is called. The mapping object (tmod_dbs_mapping_obj) is less critical,
+#' as it is usually much smaller and faster to load.
+#'
+#' Alternatively, if you assign the output of `plot_evidence()` to a
+#' variable, this variable will store the necessary object and can be used
+#' with the `plot()` function to efficiently plot the data again.
 #' @param x an object of class seasnap_DE_pipeline
 #' @param id ID of the gene set (module) 
 #' @param dbname Name of the tmod database (see get_tmod_db_names)
@@ -146,6 +156,10 @@ plot_evidence <- function(x, id, dbname, contrast, sort="pval", contrast_obj=NUL
 
   if(is.null(tmod_dbs_obj)) {
     tmod_dbs_obj <- get_object(x, "tmod_dbs")
+    tmod_dbs_obj <- tmod_dbs_obj[dbname]
+    if(is.null(tmod_dbs_obj[[dbname]])) {
+      stop(glue("No database with name {dbname}"))
+    }
   }
 
   evidencePlot(gl, m=id, mset=mset, gene.colors=colors, gene.labels=gene.labels, ...)
@@ -184,6 +198,48 @@ Use plot(object, id) to show evidence plot
 for other gene set IDs for the same database and contrast\n\n"))
 }
 
+
+
+
+#' Run tmod gene set enrichment
+#'
+#' Run tmod gene set enrichment
+#'
+#' It is usually much more efficient to get the tmod database object first
+#' and pass it as an optional argument than to load it each time this function
+#' is called. The mapping object (tmod_dbs_mapping_obj) is less critical,
+#' as it is usually much smaller and faster to load.
+#' @param x an object of class seasnap_DE_pipeline
+#' @param gl an ordered character vector with primary IDs
+#' @param dbname name of the gene set database to use
+#' @param tmod_dbs_obj object return by the `get_tmod_dbs()` function
+#' @param tmod_dbs_mapping_obj the object returned by `get_object(x, "tmod_dbs", "mapping.rds")`
+#' @param func tmod gene set enrichment function (by default, tmodCERNOtest)
+#' @param ... further arguments passed to the tmod gene set enrichment test function
+#' @import tmod
+#' @export
+test_gsea_tmod <- function(x, gl, dbname, tmod_dbs_obj=NULL, tmod_dbs_mapping_obj=NULL, func=tmodCERNOtest, ...) {
+
+  if(is.null(tmod_dbs_mapping_obj)) {
+    tmod_dbs_mapping_obj <- get_object(x, step="tmod_dbs", extension="mapping.rds")
+    if(is.na(tmod_dbs_mapping_obj$dbs[dbname])) {
+      stop(glue("No mapping for database {dbname} in the mapping object"))
+    }
+  }
+
+  if(is.null(tmod_dbs_obj)) {
+    tmod_dbs_obj <- get_tmod_dbs(x)[dbname]
+    if(is.null(tmod_dbs_obj[[dbname]])) {
+      stop(glue("No database with name {dbname}"))
+    }
+  }
+
+  gl <- tmod_db_map_ids(x, gl, dbname, tmod_dbs_mapping_obj)
+  mset <- tmod_dbs_obj[[dbname]]$dbobj
+
+  args <- c(list(l=gl, mset=mset), list(...))
+  do.call(func, args)
+}
 
 
 

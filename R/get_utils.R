@@ -41,14 +41,24 @@ get_contrasts <- function(x, contrasts=NULL) {
     contrasts <- get_contrast_names(x)
   }
 
-
   ret <- lapply(contrasts, function(c) {
-    path <- subset(x$file_tab, step == "contrast" & contrast == c & extension == "rds")$filename
+    sel <- with(x$file_tab, step == "contrast" & contrast == c & extension == "rds")
+    path <- x$file_tab$filename[sel]
     as.data.frame(seasnap_readRDS(x, path))
   })
 
   names(ret) <- contrasts
   return(ret)
+}
+
+#' Return the tmod gene set database object
+#'
+#' Return the tmod gene set database object
+#' @param x an object of class seasnap_DE_pipeline
+#' @return a list containing gene set databases and corresponding tmod objects
+#' @export
+get_tmod_dbs <- function(x) {
+  get_object(x, step="tmod_dbs")
 }
 
 
@@ -59,9 +69,7 @@ get_contrasts <- function(x, contrasts=NULL) {
 #' @return an object of class DESeq2
 #' @export
 get_deseq2 <- function(x) {
-  .check_de_obj(x)
-  path <- subset(x$file_tab, step == "DESeq2" & extension == "deseq2.rds")$filename
-  seasnap_readRDS(x, path)
+  get_object(x, step="DESeq2", extension="deseq2.rds", contrast="all", multiple_ok=FALSE)
 }
 
 #' Get the covariates
@@ -163,7 +171,7 @@ get_object <- function(x, step, extension="rds", contrast=NULL, multiple_ok=TRUE
 #' @param contrast optional: choice of the contrast
 #' @param multiple_ok whether it is OK to return multiple objects
 #' @return a character vector of file paths
-#' @import glue
+#' @importFrom glue glue
 #' @export
 get_object_path <- function(x, step, extension, contrast=NULL, multiple_ok=TRUE) {
 

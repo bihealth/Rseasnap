@@ -29,15 +29,17 @@ print.seasnap_DE_pipeline <- function(x, ...) {
 #' In any case, the config is only consulted to get the output file path of
 #' the pipeline; then, the files file_tab and config are read to ensure that
 #' the object is up to date.
-#' @param path path to the pipeline directory. This is overridden if config
-#'        and file_tab are defined.
+#' @param x an object of class seasnap_DE_pipeline
+#' @param config_file path to the DE yaml configuration file
 #' @param config object accessible in R snippets of the DE
 #'         pipeline containing the pipeline configuration and produced files. If tis
 #'         parameter is defined, it overrides the `path` parameter.
+#' @param ... Further arguments passed to the `print()` function
 #' @return seasnap DE pipeline object of class "seasnap_DE_pipeline"
 #' @importFrom yaml read_yaml
-#' @import lubridate
+#' @importFrom lubridate now
 #' @import colorDF
+#' @importFrom utils read.table
 #' @export
 load_de_pipeline <- function(config_file="DE_config.yaml", config=NULL) {
 
@@ -100,7 +102,7 @@ load_de_pipeline <- function(config_file="DE_config.yaml", config=NULL) {
 
 ## load a yaml file, timestamped
 .get_yaml <- function(path, oldobj=NULL, check_for_newer=TRUE) {
-  .get_file_timestamped(path, yaml.load_file, oldobj, check_for_newer)
+  .get_file_timestamped(path, read_yaml, oldobj, check_for_newer)
 }
 
 
