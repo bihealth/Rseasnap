@@ -22,6 +22,9 @@
 ## read and timestamp an RDS file
 seasnap_readRDS <- function(x, path) {
   ts <- attr(x$config, "timestamp")
+  if(!file.exists(path)) {
+    stop(glue("File {path} does not exist"))
+  }
   fi <- file.info(path)$mtime[1]
 
   if(ts < fi) {

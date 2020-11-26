@@ -49,17 +49,20 @@ load_de_pipeline <- function(config_file="DE_config.yaml", config=NULL) {
 
   if(!is.null(config)) {
     if(is.null(config$pipeline_param) || is.null(config$pipeline_param$out_path_pattern)) {
-      stop("config does not contain config$pipeline_param$out_path_pattern")
+      stop("config does not contain config$pipeline_param$out_path_pattern\nSetting wd to ./")
     }
     pip <- config
+    ret$dir <- "."
   } else {
     pip <- read_yaml(config_file)
+    ret$dir <- dirname(config_file)
   }
 
-  ret$out_path <- pip$pipeline_param$out_path_pattern
+  ret$out_path <- file.path(ret$dir, pip$pipeline_param$out_path_pattern)
 
   ret$file_tab_path <- get_pipeline_path(ret$out_path, step="report", extension="tsv")
   ret$file_tab      <- .get_table(ret$file_tab_path)
+  ret$file_tab$filename <- file.path(ret$dir, ret$file_tab$filename)
 
   ret$config_path <- get_pipeline_path(ret$out_path, step="pipeline_report", extension="yaml")
   ret$config      <- .get_yaml(ret$config_path)
