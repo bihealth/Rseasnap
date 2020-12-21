@@ -47,6 +47,9 @@ disco_color_scale <- function(x, lower=-100, upper=100, int=255, alpha="66") {
 #' @param show_top_labels sort the genes by descending absolute disco score and show top N labels
 #' @param annot annotation object returned by `get_annot()` or any other data
 #'        frame with columns "PrimaryID" and "SYMBOL"
+#' @param top_labels_both should top labels from both negative and positive
+#         disco scores be shown, or only for the absolute top, whether only negative
+#         or only positive or both?
 #' @examples
 #' ## Generate example data
 #' c1 <- data.frame(log2FoldChange=rnorm(5000, sd=2))
@@ -127,15 +130,16 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
 #' @param contrast1,contrast2 data frames with rownames corresponding to
 #'        IDs (they don't need to be in the same order) and columns `log2FoldChange`
 #'        and `pvalue`.
+#' @param minp minimum p-value
 #' @return a merged data frame containing column "disco.score"
 #' @importFrom methods as
 #' @export
-disco_score <- function(contrast1, contrast2) {
+disco_score <- function(contrast1, contrast2, minp=1e-16) {
 
   cc <- merge(as(contrast1, "data.frame"), as(contrast2, "data.frame"), by=0)
   colnames(cc)[1] <- "PrimaryID"
   rownames(cc) <- cc[,1]
-  cc$disco <- with(cc, log2FoldChange.x * log2FoldChange.y * (-log10(pvalue.x) -log10(pvalue.y)))
+  cc$disco <- with(cc, log2FoldChange.x * log2FoldChange.y * (-log10(pvalue.x + minp) -log10(pvalue.y  + minp)))
   cc$disco[ is.na(cc$disco) ] <- 0
   return(cc)
 }
