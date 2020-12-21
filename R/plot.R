@@ -104,7 +104,7 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
     
   }
 
-  cc <- cc %>% filter(!is.na(log2FoldChange.x) & !is.na(log2FoldChange.y) & !is.na(disco))
+  cc <- cc %>% filter(!is.na(log2FoldChange.x) & !is.na(log2FoldChange.y) & !is.na(col) & !is.na(disco))
 
   g <- ggplot(cc, aes(x=.data$log2FoldChange.x, y=.data$log2FoldChange.y, col=.data$col)) +
   geom_point() + col_scale + theme(legend.position="none") +
