@@ -47,12 +47,21 @@ disco_color_scale <- function(x, lower=-100, upper=100, int=255, alpha="66") {
 #' @param show_top_labels sort the genes by descending absolute disco score and show top N labels
 #' @param annot annotation object returned by `get_annot()` or any other data
 #'        frame with columns "PrimaryID" and "SYMBOL"
+#' @examples
+#' ## Generate example data
+#' c1 <- data.frame(log2FoldChange=rnorm(5000, sd=2))
+#' c1$pvalue <- pnorm(abs(c1$log2FoldChange), sd=2, lower.tail=F)
+#' c2 <- data.frame(log2FoldChange=c1$log2FoldChange + rnorm(5000, sd=3))
+#' c2$pvalue <- pnorm(abs(c2$log2FoldChange), sd=2, lower.tail=F)
+#'
+#' ## Example disco plot
+#' plot_disco(c1, c2)
 #' @return a ggplot object (plot)
 #' @import ggplot2 ggrepel
 #' @importFrom stats cor
 #' @export
 plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
-  show_top_labels=0, annot=NULL) {
+  show_top_labels=0, top_labels_both=TRUE, annot=NULL) {
 
   cc <- disco_score(contrast1, contrast2)
   cc$col <- disco_color_scale(cc$disco, lower=lower, upper=upper)
@@ -67,16 +76,25 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
     if(!is.null(annot) && all(c("PrimaryID", "SYMBOL") %in% colnames(annot))) {
       cc$label <- annot$SYMBOL[ match(rownames(cc), annot$PrimaryID) ]
       cc$label[is.na(cc$label)] <- ""
-    } else {
-      cc$label <- rownames(cc)
+    } else if(is.null(cc$label <- rownames(cc))) {
+      cc$label <- ""
     }
-    cc$label[ 1:nrow(cc) > show_top_labels ] <- ""
+    if(top_labels_both) {
+      o1 <- which(cc$disco > 0)[ 1:show_top_labels ]
+      o2 <- which(cc$disco < 0)[ 1:show_top_labels ]
+      cc$label[ ! 1:nrow(cc) %in% c(o1, o2) ] <- ""
+
+    } else {
+      cc$label[ 1:nrow(cc) > show_top_labels ] <- ""
+    }
+
     cc$labcol <- ifelse(cc$disco > 0, "#990000", "#000099")
     cc$labcol[is.na(cc$labcol)] <- "#666666"
     col_scale <- scale_color_manual(values=c(
                set_names( unique(cc$col), unique(cc$col)),
                set_names( unique(cc$labcol), unique(cc$labcol))
               ))
+    
   }
 
   g <- ggplot(cc, aes(x=.data$log2FoldChange.x, y=.data$log2FoldChange.y, col=.data$col)) +
