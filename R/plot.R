@@ -48,8 +48,9 @@ disco_color_scale <- function(x, lower=-100, upper=100, int=255, alpha="66") {
 #' @param annot annotation object returned by `get_annot()` or any other data
 #'        frame with columns "PrimaryID" and "SYMBOL"
 #' @param top_labels_both should top labels from both negative and positive
-#         disco scores be shown, or only for the absolute top, whether only negative
-#         or only positive or both?
+#'        disco scores be shown, or only for the absolute top, whether only negative
+#'        or only positive or both?
+#' @param alpha transparency
 #' @examples
 #' ## Generate example data
 #' c1 <- data.frame(log2FoldChange=rnorm(5000, sd=2))
@@ -64,7 +65,7 @@ disco_color_scale <- function(x, lower=-100, upper=100, int=255, alpha="66") {
 #' @importFrom stats cor
 #' @export
 plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
-  show_top_labels=0, top_labels_both=TRUE, annot=NULL) {
+  show_top_labels=0, top_labels_both=TRUE, annot=NULL, alpha=.5) {
 
   cc <- disco_score(contrast1, contrast2)
   cc$col <- disco_color_scale(cc$disco, lower=lower, upper=upper)
@@ -98,7 +99,7 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
 
 
   g <- ggplot(cc, aes(x=log2FoldChange.x, y=log2FoldChange.y)) +
-    geom_point(aes(color=disco), alpha=.7) + 
+    geom_point(aes(color=disco), alpha=alpha) + 
     scale_color_gradient2(low="blue", mid="grey", high="red") + 
     theme(legend.position="none") +
     geom_hline(aes(yintercept=0), color="grey") +
