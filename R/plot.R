@@ -98,7 +98,7 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
 
 
   g <- ggplot(cc, aes(x=log2FoldChange.x, y=log2FoldChange.y)) +
-    geom_point(aes(color=disco)) + 
+    geom_point(aes(color=disco), alpha=.7) + 
     scale_color_gradient2(low="blue", mid="grey", high="red") + 
     theme(legend.position="none") +
     geom_hline(aes(yintercept=0), color="grey") +
@@ -124,7 +124,7 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
 #' Merge two contrasts and calculate the disco score
 #'
 #' Disco score is a heuristic score 
-#' reflecting the strength of similarity or dissimilarity between two
+#' reflecting the strength of similarityor dissimilarity between two
 #' log~2~ FC values weighted by the corresponding p-values and given by the
 #' formula log2FC.x * log2FC.y * (-log10(pval.x) - log10(pval.y)).
 #' @param contrast1,contrast2 data frames with rownames corresponding to
