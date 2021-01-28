@@ -71,6 +71,7 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
   cc <- cc[ order(-abs(cc$disco)), ]
 
   if(show_top_labels > 0) {
+    cc$label <- ""
     if(!is.null(annot) && all(c("PrimaryID", "SYMBOL") %in% colnames(annot))) {
       cc$label <- as.character(annot$SYMBOL)[ match(rownames(cc), annot$PrimaryID) ]
       sel <- is.na(cc$label)
