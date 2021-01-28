@@ -70,12 +70,6 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
   cc$col <- disco_color_scale(cc$disco, lower=lower, upper=upper)
   cc <- cc[ order(-abs(cc$disco)), ]
 
-  col_scale <- scale_color_manual(values=
-      set_names(
-        unique(cc$col), unique(cc$col)
-      )
-    )
-
   if(show_top_labels > 0) {
     if(!is.null(annot) && all(c("PrimaryID", "SYMBOL") %in% colnames(annot))) {
       cc$label <- as.character(annot$SYMBOL)[ match(rownames(cc), annot$PrimaryID) ]
@@ -94,20 +88,18 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
       cc$label[ 1:nrow(cc) > show_top_labels ] <- ""
     }
 
-    cc$labcol <- ifelse(cc$disco > 0, "#990000", "#000099")
-    cc$labcol[is.na(cc$labcol)] <- "#666666"
     cc$label[is.na(cc$label)] <- ""
-    col_scale <- scale_color_manual(values=c(
-               set_names( unique(cc$col), unique(cc$col)),
-               set_names( unique(cc$labcol), unique(cc$labcol))
-              ))
-    
   }
 
-  cc <- cc %>% filter(!is.na(log2FoldChange.x) & !is.na(log2FoldChange.y) & !is.na(col) & !is.na(disco))
+  cc <- cc %>% filter(!is.na(log2FoldChange.x) & !is.na(log2FoldChange.y) & !is.na(disco)) %>%
+    mutate(disco=ifelse(disco > upper, upper, ifelse(disco < lower, lower, disco))) %>%
+    arrange(abs(disco))
 
-  g <- ggplot(cc, aes(x=.data$log2FoldChange.x, y=.data$log2FoldChange.y, col=.data$col)) +
-  geom_point() + col_scale + theme(legend.position="none") +
+
+  g <- ggplot(cc, aes(x=log2FoldChange.x, y=log2FoldChange.y)) +
+    geom_point(aes(color=disco)) + 
+    scale_color_gradient2(low="blue", mid="grey", high="red") + 
+    theme(legend.position="none") +
     geom_hline(aes(yintercept=0), color="grey") +
     geom_vline(aes(xintercept=0), color="grey") +
     geom_abline(aes(slope=1, intercept=0), color="grey")
@@ -118,7 +110,7 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
         cor(cc$log2FoldChange.x, cc$log2FoldChange.y, method="s", use="p")))
 
   if(show_top_labels > 0) {
-    g <- g + geom_label_repel(aes(label=.data$label, col=.data$labcol))
+    g <- g + geom_label_repel(aes(label=label, color=disco))
   }
 
   return(g)
