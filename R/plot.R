@@ -93,7 +93,7 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
     cc$label[is.na(cc$label)] <- ""
   }
 
-  cc <- cc %>% filter(!is.na(log2FoldChange.x) & !is.na(log2FoldChange.y) & !is.na(label) & !is.na(disco)) %>%
+  cc <- cc %>% filter(!is.na(log2FoldChange.x) & !is.na(log2FoldChange.y) & !is.na(disco)) %>%
     mutate(disco=ifelse(disco > upper, upper, ifelse(disco < lower, lower, disco))) %>%
     arrange(abs(disco))
 
