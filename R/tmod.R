@@ -217,6 +217,7 @@ for other gene set IDs for the same database and contrast\n\n"))
 #' @param func tmod gene set enrichment function (by default, tmodCERNOtest)
 #' @param ... further arguments passed to the tmod gene set enrichment test function
 #' @import tmod
+#' @seealso [tmod::tmodCERNOtest()], [get_tmod_dbs()], [get_tmod_mapping()]
 #' @export
 test_gsea_tmod <- function(x, gl, dbname, tmod_dbs_obj=NULL, tmod_dbs_mapping_obj=NULL, func=tmodCERNOtest, ...) {
 
@@ -234,11 +235,55 @@ test_gsea_tmod <- function(x, gl, dbname, tmod_dbs_obj=NULL, tmod_dbs_mapping_ob
     }
   }
 
-  gl <- tmod_db_map_ids(x, gl, dbname, tmod_dbs_mapping_obj)
-  mset <- tmod_dbs_obj[[dbname]]$dbobj
+  gl   <- tmod_db_map_ids(x, gl, dbname, tmod_dbs_mapping_obj)
+  mset <- tmod_dbs_obj[[dbname]][[dbobj]]
 
   args <- c(list(l=gl, mset=mset), list(...))
   do.call(func, args)
+}
+
+#' Produce a tabbed DT results table
+#'
+#' Produce a tabbed DT results table of gene set enrichment test.
+#' @param res results of a gene set enrichment test (e.g.  [test_gsea_tmod()])
+#' @param pval_thr report only results with FDR < pval_thr
+#' @param es_trh report only results with effect size > es_thr
+#' @import DT
+#' @importFrom knitr knit_child
+#' @seealso [test_gsea_tmod()]
+#' @export
+test_results_tabbed_DT <- function(res, pval_thr=.05, es_thr=.6) {
+
+  ## table template
+  template <- "
+\n```{r}
+datatable(.r, extensions=c('Buttons','FixedColumns'), rownames=FALSE, escape=FALSE,
+        options = list(scrollX=TRUE, fixedColumns=list(leftColumns=1), dom='Bfrtip', buttons=c('excel', 'csv'))) %>%
+        formatSignif('p.value', 2) %>%
+        formatSignif('FDR', 2) %>%
+        formatSignif('AUC', 2)
+
+\n```
+
+"
+
+  cat("\n##### {.tabset}\n")
+
+  for(db in names(res)) {
+    cat(sprintf("\n###### %s\n", db))
+    .r <- res[[db]]
+    if(is.null(.r)) {
+      cat("\nNo results.\n")
+    } else {
+      .r <- .r %>% dplyr::filter(AUC > es_thr & adj.P.Val < pval_thr)
+      if(nrow(.r) < 1) {
+        cat(sprintf("\nNo results below specified thresholds (ES > %.2f, p_val < %.2f).\n", es_thr, pval_thr))
+      } else {
+        text <- knitr::knit_child(text=template, quiet=TRUE)
+      }
+    }
+  }
+  cat("\n##### {-}\n")
 }
 
 
