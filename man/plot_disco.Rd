@@ -10,7 +10,9 @@ plot_disco(
   lower = -100,
   upper = 100,
   show_top_labels = 0,
-  annot = NULL
+  top_labels_both = TRUE,
+  annot = NULL,
+  alpha = 0.5
 )
 }
 \arguments{
@@ -22,8 +24,14 @@ and \code{pvalue}.}
 
 \item{show_top_labels}{sort the genes by descending absolute disco score and show top N labels}
 
+\item{top_labels_both}{should top labels from both negative and positive
+disco scores be shown, or only for the absolute top, whether only negative
+or only positive or both?}
+
 \item{annot}{annotation object returned by \code{get_annot()} or any other data
 frame with columns "PrimaryID" and "SYMBOL"}
+
+\item{alpha}{transparency}
 }
 \value{
 a ggplot object (plot)
@@ -42,4 +50,14 @@ formula log2FC.x * log2FC.y * (-log10(pval.x) - log10(pval.y)).
 To manually select which labels to show, use a truncated \code{annot} object
 – remove all rows you don't want to show, and set the show_top_labels
 parameter to \code{Inf}.
+}
+\examples{
+## Generate example data
+c1 <- data.frame(log2FoldChange=rnorm(5000, sd=2))
+c1$pvalue <- pnorm(abs(c1$log2FoldChange), sd=2, lower.tail=F)
+c2 <- data.frame(log2FoldChange=c1$log2FoldChange + rnorm(5000, sd=3))
+c2$pvalue <- pnorm(abs(c2$log2FoldChange), sd=2, lower.tail=F)
+
+## Example disco plot
+plot_disco(c1, c2)
 }

@@ -257,7 +257,7 @@ test_results_tabbed_DT <- function(res, pval_thr=.05, es_thr=.6) {
   ## table template
   template <- "
 \n```{r}
-datatable(.r, extensions=c('Buttons','FixedColumns'), rownames=FALSE, escape=FALSE,
+datatable(res_tmp, extensions=c('Buttons','FixedColumns'), rownames=FALSE, escape=FALSE,
         options = list(scrollX=TRUE, fixedColumns=list(leftColumns=1), dom='Bfrtip', buttons=c('excel', 'csv'))) %>%
         formatSignif('p.value', 2) %>%
         formatSignif('FDR', 2) %>%
@@ -275,8 +275,8 @@ datatable(.r, extensions=c('Buttons','FixedColumns'), rownames=FALSE, escape=FAL
     if(is.null(.r)) {
       cat("\nNo results.\n")
     } else {
-      .r <- .r %>% dplyr::filter(AUC > es_thr & adj.P.Val < pval_thr)
-      if(nrow(.r) < 1) {
+      res_tmp <- .r %>% dplyr::filter(AUC > es_thr & adj.P.Val < pval_thr)
+      if(nrow(res_tmp) < 1) {
         cat(sprintf("\nNo results below specified thresholds (ES > %.2f, p_val < %.2f).\n", es_thr, pval_thr))
       } else {
         out <- knitr::knit_child(text=template, quiet=TRUE)

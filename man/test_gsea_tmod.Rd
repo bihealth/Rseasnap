@@ -38,3 +38,6 @@ and pass it as an optional argument than to load it each time this function
 is called. The mapping object (tmod_dbs_mapping_obj) is less critical,
 as it is usually much smaller and faster to load.
 }
+\seealso{
+\code{\link[tmod:tmodUtest]{tmod::tmodCERNOtest()}}, \code{\link[=get_tmod_dbs]{get_tmod_dbs()}}, \code{\link[=get_tmod_mapping]{get_tmod_mapping()}}
+}

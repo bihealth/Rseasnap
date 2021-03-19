@@ -4,12 +4,14 @@
 \alias{disco_score}
 \title{Calculate the disco score}
 \usage{
-disco_score(contrast1, contrast2)
+disco_score(contrast1, contrast2, minp = 1e-16)
 }
 \arguments{
 \item{contrast1, contrast2}{data frames with rownames corresponding to
 IDs (they don't need to be in the same order) and columns \code{log2FoldChange}
 and \code{pvalue}.}
+
+\item{minp}{minimum p-value}
 }
 \value{
 a merged data frame containing column "disco.score"
@@ -19,7 +21,7 @@ Merge two contrasts and calculate the disco score
 }
 \details{
 Disco score is a heuristic score
-reflecting the strength of similarity or dissimilarity between two
+reflecting the strength of similarityor dissimilarity between two
 log~2~ FC values weighted by the corresponding p-values and given by the
 formula log2FC.x * log2FC.y * (-log10(pval.x) - log10(pval.y)).
 }

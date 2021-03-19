@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_utils.R
 \name{get_tmod_dbs}
 \alias{get_tmod_dbs}
-\title{Return the tmod gene set database object}
+\title{Return the tmod gene set database objects}
 \usage{
 get_tmod_dbs(x)
 }
@@ -10,8 +10,8 @@ get_tmod_dbs(x)
 \item{x}{an object of class seasnap_DE_pipeline}
 }
 \value{
-a list containing gene set databases and corresponding tmod objects
+a list containing gene set databases and corresponding tmod objects;
 }
 \description{
-Return the tmod gene set database object
+Return the tmod gene set database objects
 }
