@@ -236,7 +236,7 @@ test_gsea_tmod <- function(x, gl, dbname, tmod_dbs_obj=NULL, tmod_dbs_mapping_ob
   }
 
   gl   <- tmod_db_map_ids(x, gl, dbname, tmod_dbs_mapping_obj)
-  mset <- tmod_dbs_obj[[dbname]][[dbobj]]
+  mset <- tmod_dbs_obj[[dbname]][["dbobj"]]
 
   args <- c(list(l=gl, mset=mset), list(...))
   do.call(func, args)
