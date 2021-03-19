@@ -279,7 +279,8 @@ datatable(.r, extensions=c('Buttons','FixedColumns'), rownames=FALSE, escape=FAL
       if(nrow(.r) < 1) {
         cat(sprintf("\nNo results below specified thresholds (ES > %.2f, p_val < %.2f).\n", es_thr, pval_thr))
       } else {
-        text <- knitr::knit_child(text=template, quiet=TRUE)
+        out <- knitr::knit_child(text=template, quiet=TRUE)
+        cat(out)
       }
     }
   }
