@@ -22,6 +22,7 @@ Imports:
     colorDF,
     dplyr,
     glue,
+    knitr,
     lubridate,
     plotly,
     purrr,
@@ -29,6 +30,5 @@ Imports:
     tmod,
     yaml
 Suggests: 
-    knitr,
     rmarkdown
 VignetteBuilder: knitr
