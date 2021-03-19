@@ -51,14 +51,40 @@ get_contrasts <- function(x, contrasts=NULL) {
   return(ret)
 }
 
-#' Return the tmod gene set database object
+#' Return the tmod gene set database objects
 #'
-#' Return the tmod gene set database object
+#' Return the tmod gene set database objects
 #' @param x an object of class seasnap_DE_pipeline
-#' @return a list containing gene set databases and corresponding tmod objects
+#' @return a list containing gene set databases and corresponding tmod objects; 
 #' @export
 get_tmod_dbs <- function(x) {
-  get_object(x, step="tmod_dbs")
+  get_object(x, step="tmod_dbs", contrast="all", multiple_ok=FALSE)
+}
+
+#' Return the tmod database mapping object
+#'
+#' Return the tmod database mapping object
+#'
+#' It is best to use the output of this function with [tmod_db_map_ids()].
+#'
+#' tmod mapping object is a set of mappings between the identifiers used in
+#' the tmod databases such as MSigDB and the primary identifiers used in the
+#' pipeline. The object is a list consisting of three elements:
+#'
+#'  * `dbs`: a named character vector. Names are the IDs of the tmod
+#'           databases; values are the IDs of the mappings.
+#'  * `maps`: a named list of named character vectors. Names of the
+#' elements of the list are mapping IDs and correspond to the values of the
+#' `dbs` element. Elements of the list are mappings. Each mapping is a
+#' named character vector. Names of this vector are PrimaryIDs, and values are
+#' the corresponding IDs in the given database.
+#' Return the tmod database mapping object
+#' @param x an object of class seasnap_DE_pipeline
+#' @return a list containing the tmod mapping object
+#' @seealso [get_tmod_dbs()], [tmod_db_map_ids()]
+#' @export
+get_tmod_mapping <- function(x) {
+  get_object(x, step="tmod_dbs", extension="mapping.rds", contrast="all", multiple_ok=FALSE)
 }
 
 
