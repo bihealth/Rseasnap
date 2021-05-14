@@ -11,7 +11,7 @@ test_results_tabbed_DT(res, pval_thr = 0.05, es_thr = 0.6)
 
 \item{pval_thr}{report only results with FDR < pval_thr}
 
-\item{es_trh}{report only results with effect size > es_thr}
+\item{es_thr}{report only results with effect size > es_thr}
 }
 \description{
 Produce a tabbed DT results table of gene set enrichment test.

@@ -54,9 +54,9 @@ parameter to \code{Inf}.
 \examples{
 ## Generate example data
 c1 <- data.frame(log2FoldChange=rnorm(5000, sd=2))
-c1$pvalue <- pnorm(abs(c1$log2FoldChange), sd=2, lower.tail=F)
+c1$pvalue <- pnorm(abs(c1$log2FoldChange), sd=2, lower.tail=FALSE)
 c2 <- data.frame(log2FoldChange=c1$log2FoldChange + rnorm(5000, sd=3))
-c2$pvalue <- pnorm(abs(c2$log2FoldChange), sd=2, lower.tail=F)
+c2$pvalue <- pnorm(abs(c2$log2FoldChange), sd=2, lower.tail=FALSE)
 
 ## Example disco plot
 plot_disco(c1, c2)
