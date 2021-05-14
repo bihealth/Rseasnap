@@ -6,9 +6,10 @@
 #' @param tmod_dbs tmod db object returned by get_tmod_dbs
 #' @return does not return a value
 #' @import dplyr
-#' @importFrom shiny shinyApp renderText renderPlot verbatimTextOutput textOutput
-#' @importFrom shiny actionButton column fluidPage fluidRow h1 mainPanel plotOutput reactiveValues selectInput sidebarLayout sidebarPanel titlePanel
+#' @importFrom shiny shinyApp renderText renderPlot verbatimTextOutput textOutput renderUI uiOutput
+#' @importFrom shiny actionButton column fluidPage fluidRow h1 mainPanel plotOutput reactiveValues selectInput sidebarLayout sidebarPanel titlePanel 
 #' @importFrom DT datatable formatSignif renderDataTable dataTableOutput
+#' @importFrom htmltools HTML
 #' @importFrom colorDF summary_colorDF
 #' @examples
 #' \dontrun{
@@ -21,7 +22,7 @@ tmod_browser <- function(pip, tmod_dbs=NULL) {
 
   message("preparing...")
   but <- as.character(actionButton("go_%s-!-%s-!-%s-!-%s", label=" > ", 
-                                   onclick='Shiny.onInputChange(\"select_button\",  this.id)'))
+                                   onclick='Shiny.onInputChange(\"select_button\",  this.id)',  class = "btn-primary"))
   annot    <- get_annot(pip)
   tmod_map <- get_tmod_mapping(pip)
 
@@ -58,7 +59,8 @@ tmod_browser <- function(pip, tmod_dbs=NULL) {
       sidebarPanel(
          fluidRow(selectInput("contrast", label="Contrast", choices=cntr_titles)),
          fluidRow(selectInput("db", label="Database", choices=dbs)),
-         fluidRow(selectInput("sort", label="Sorting", choices=sorting))
+         fluidRow(selectInput("sort", label="Sorting", choices=sorting)),
+         HTML(paste("Click on the", but, "buttons to view an expression profile"))
       ),
       mainPanel(
         dataTableOutput("tmodResTab")
@@ -77,6 +79,8 @@ tmod_browser <- function(pip, tmod_dbs=NULL) {
 
   server <- function(input, output, session) {
     output$tmodResTab <- renderDataTable({
+      id <- showNotification("Rendering table...", duration = NULL, closeButton = FALSE)
+      on.exit(removeNotification(id), add = TRUE)
       res <- tmod_res[[input$contrast]][[input$db]][[input$sort]]
       datatable(res, escape=FALSE, selection='none', options=list(pageLength=5)) %>%
         formatSignif(columns=intersect(colnames(res), 
@@ -135,6 +139,7 @@ tmod_browser <- function(pip, tmod_dbs=NULL) {
 #' @return does not return a value
 #' @importFrom rlang .data
 #' @importFrom stats cor.test
+#' @importFrom bslib bs_theme
 #' @examples
 #' \dontrun{
 #' pip <- load_de_pipeline(config_file="DE_config.yaml")
@@ -145,7 +150,7 @@ gene_browser <- function(pip) {
 
   message("preparing...")
   but <- as.character(actionButton("go_%s", label=" > ", 
-                                   onclick='Shiny.onInputChange(\"select_button\",  this.id)'))
+                                   onclick='Shiny.onInputChange(\"select_button\",  this.id)',  class = "btn-primary"))
   annot  <- get_annot(pip)
 
   # prepare the contrast tables
@@ -177,9 +182,12 @@ gene_browser <- function(pip) {
   names(cntr_titles) <- map_chr(config$contrasts$contrast_list, `[[`, "title")
 
   ui <- fluidPage(
+    theme = bs_theme(bootswatch = "united"),
     titlePanel(h1("Gene browser")),
     fluidRow(
-      column(2, selectInput("contrast", label = "Dataset", choices = cntr_titles)),
+      column(2, selectInput("contrast", label = "Dataset", choices = cntr_titles),
+        HTML(paste("Click on the", but, "buttons to view an expression profile"))
+             ),
       column(10, dataTableOutput("result_tbl"))
       ),
     sidebarLayout(
@@ -205,12 +213,15 @@ gene_browser <- function(pip) {
    })
 
     output$result_tbl <- DT::renderDataTable({
+      id <- showNotification("Rendering table...", duration = NULL, closeButton = FALSE)
+      on.exit(removeNotification(id), add = TRUE)
       message(glue("preparing table contrast {input$contrast}"))
       message(nrow(cntr[[ input$contrast ]]))
       datatable(cntr[[ input$contrast ]], escape=FALSE, selection='none', options=list(pageLength=5)) %>%
         formatSignif(columns=intersect(colnames(cntr[[ input$contrast ]]), 
                                        c("log2FoldChange", "pvalue", "padj")), digits=2)
     })
+
 
     output$geneData <- renderText({
       id <- gsub("go_", "", input$select_button)
@@ -224,29 +235,29 @@ gene_browser <- function(pip) {
               annot[match(id, annot$PrimaryID), "GENENAME"])
     })
 
-   #output$addInfo <- renderText({
-   #  message("calculating info")
-   #  id <- gsub("go_", "", input$select_button)
-   #  if(length(id) == 0) {
-   #    id <- rownames(rld)[1]
-   #  }
-   #  ret <- ""
+   output$addInfo <- renderText({
+     message("calculating info")
+     id <- gsub("go_", "", input$select_button)
+     if(length(id) == 0) {
+       id <- rownames(rld)[1]
+     }
+     ret <- ""
 
-   #  x <- covar[[input$covarName]]
+     x <- covar[[input$covarName]]
 
-   #  if(is.numeric(x)) {
-   #    y <- rld[id, ]
-   #    pearson.test  <- cor.test(x, y, use="p")
-   #    spearman.test <- cor.test(x, y, use="p", method="s")
-   #    ret <- paste0(ret,
-   #      sprintf("Correlation: r=%.2f [p = %s], rho=%.2f [p = %s]",
-   #              pearson.test$estimate,
-   #              format.pval(pearson.test$p.value, digits=2),
-   #              spearman.test$estimate,
-   #              format.pval(spearman.test$p.value, digits=2)))
-   #  }
-   #  return(ret)
-   #})
+     if(is.numeric(x)) {
+       y <- rld[id, ]
+       pearson.test  <- cor.test(x, y, use="p")
+       spearman.test <- cor.test(x, y, use="p", method="s")
+       ret <- paste0(ret,
+         sprintf("Correlation: r=%.2f [p = %s], rho=%.2f [p = %s]",
+                 pearson.test$estimate,
+                 format.pval(pearson.test$p.value, digits=2),
+                 spearman.test$estimate,
+                 format.pval(spearman.test$p.value, digits=2)))
+     }
+     return(ret)
+   })
 
     output$countsplot <- renderPlot({
       id <- gsub("go_", "", input$select_button)

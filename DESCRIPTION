@@ -33,7 +33,9 @@ Imports:
     shiny,
     cowplot,
     rlang,
-    stats
+    stats,
+    bslib,
+    htmltools
 Suggests: 
     rmarkdown
 VignetteBuilder: knitr
