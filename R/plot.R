@@ -54,9 +54,9 @@ disco_color_scale <- function(x, lower=-100, upper=100, int=255, alpha="66") {
 #' @examples
 #' ## Generate example data
 #' c1 <- data.frame(log2FoldChange=rnorm(5000, sd=2))
-#' c1$pvalue <- pnorm(abs(c1$log2FoldChange), sd=2, lower.tail=F)
+#' c1$pvalue <- pnorm(abs(c1$log2FoldChange), sd=2, lower.tail=FALSE)
 #' c2 <- data.frame(log2FoldChange=c1$log2FoldChange + rnorm(5000, sd=3))
-#' c2$pvalue <- pnorm(abs(c2$log2FoldChange), sd=2, lower.tail=F)
+#' c2$pvalue <- pnorm(abs(c2$log2FoldChange), sd=2, lower.tail=FALSE)
 #'
 #' ## Example disco plot
 #' plot_disco(c1, c2)
@@ -93,13 +93,13 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
     cc$label[is.na(cc$label)] <- ""
   }
 
-  cc <- cc %>% filter(!is.na(log2FoldChange.x) & !is.na(log2FoldChange.y) & !is.na(disco)) %>%
-    mutate(disco=ifelse(disco > upper, upper, ifelse(disco < lower, lower, disco))) %>%
-    arrange(abs(disco))
+  cc <- cc %>% filter(!is.na(.data$log2FoldChange.x) & !is.na(.data$log2FoldChange.y) & !is.na(.data$disco)) %>%
+    mutate(disco=ifelse(.data$disco > upper, upper, ifelse(.data$disco < lower, lower, .data$disco))) %>%
+    arrange(abs(.data$disco))
 
 
-  g <- ggplot(cc, aes(x=log2FoldChange.x, y=log2FoldChange.y)) +
-    geom_point(aes(color=disco), alpha=alpha) + 
+  g <- ggplot(cc, aes(x=.data$log2FoldChange.x, y=.data$log2FoldChange.y)) +
+    geom_point(aes(color=.data$disco), alpha=alpha) + 
     scale_color_gradient2(low="blue", mid="grey", high="red") + 
     theme(legend.position="none") +
     geom_hline(aes(yintercept=0), color="grey") +
@@ -112,7 +112,7 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
         cor(cc$log2FoldChange.x, cc$log2FoldChange.y, method="s", use="p")))
 
   if(show_top_labels > 0) {
-    g <- g + geom_label_repel(aes(label=label, color=disco,
+    g <- g + geom_label_repel(aes(label=.data$label, color=.data$disco,
       force_pull=1.5, max.overlaps=Inf))
   }
 
@@ -452,3 +452,84 @@ plot_ly_pca <- function(mtx, covariate_data, threeD=TRUE, cov_default=NULL) {
   return(p)
 
 }
+
+
+#' Show gene expression in relation to a covariate
+#'
+#' Show gene expression in relation to a covariate
+#' 
+#' @param x pipeline object returned by `load_de_pipeline()`
+#' @param id PrimaryID of the gene (usually ENSEMBL ID)
+#' @param xCovar the x covariate – column name from the covariate table
+#' @param rld gene expression matrix to show on the y axis; rownames must
+#'        be PrimaryIDs. If NULL, the rld object from the pipeline is used.
+#' @param annot annotation data frame (as returned by the get_annot()
+#'        function). If empty, it will be loaded.
+#' @param covar the covariate data frame containing the column `xCovar`
+#' @param groupBy name of the covariate column by which to group and connect by lines the data points 
+#' @param symbolBy name of the covariate column by which to select point symbols
+#' @param colorBy name of the covariate column by which to color the data
+#' @return a ggplot2 object
+#' @import ggplot2 
+#' @import cowplot
+#' @export
+plot_gene <- function(x, id, xCovar, rld=NULL, annot=NULL, covar=NULL,
+                               groupBy = NA, colorBy = NA, symbolBy = NA) {
+  if(is.null(rld)) {
+    message("loading RLD")
+    rld <- get_object(x, step="DESeq2", extension="rld.blind.rds") 
+    rld <- rld@assays@data@listData[[1]]
+  }
+
+  if(is.null(annot)) { 
+    message("loading annotation")
+    annot <- get_annot(x) }
+  if(is.null(covar)) { 
+    message("loading covariates")
+    covar <- get_covariates(x) }
+
+  if(!id %in% annot$PrimaryID) {
+    stop(sprintf("PrimaryID %s not found in annotation object", id))
+  }
+
+
+  df <- data.frame(covar, Expression=rld[id, ])
+  title <- sprintf("%s (%s)", id, annot[ match(id, annot$PrimaryID), ][["SYMBOL"]])
+
+  if(!is.na(colorBy)) {
+    if(!is.na(groupBy)) {
+      g <- ggplot(df, aes(x=.data[[xCovar]], y=.data[["Expression"]], group=.data[[groupBy]], color=.data[[colorBy]]))
+    } else {
+      g <- ggplot(df, aes(x=.data[[xCovar]], y=.data[["Expression"]], color=.data[[colorBy]]))
+    }
+  } else {
+    if(!is.na(groupBy)) {
+      g <- ggplot(df, aes(x=.data[[xCovar]], y=.data[["Expression"]], group=.data[[groupBy]]))
+    } else {
+      g <- ggplot(df, aes(x=.data[[xCovar]], y=.data[["Expression"]]))
+    }
+  }
+
+  if(!is.numeric(df[[xCovar]]) && is.na(groupBy)) {
+    g <- g + geom_boxplot() + geom_jitter(size=3, alpha=.5, width=.1)
+  } else {
+    if(!is.na(symbolBy)) {
+      g <- g + geom_point(aes(shape=.data[[symbolBy]], size=3))
+    } else {
+      g <- g + geom_point(size=3)
+    }
+  }
+
+  if(!is.na(groupBy)) {
+    g <- g + geom_line()
+  }
+
+
+  g  <- g + ggtitle(title) + theme_cowplot()
+
+  return(g)
+}
+
+
+
+

@@ -3,9 +3,10 @@
 #' Map the PrimaryIDs for a database
 #'
 #' Using precomputed mappings, map PrimaryIDs (usually ENSEMBL IDs) to the
-#' IDs of the desired database.
+#' IDs of the desired database (tmod_db_map_ids) or map the IDs from a data
+#' base to PrimaryIDs (usually ENSEMBL IDs; tmod_rev_db_map_ids)
 #' @param x an object of class seasnap_DE_pipeline
-#' @param ids character vector of PrimaryIDs
+#' @param ids character vector of PrimaryIDs (for tmod_db_map_ids) or tmod db ids (for tmod_rev_db_map_ids)
 #' @param tmod_dbs_mapping_obj the object returned by `get_object(x, "tmod_dbs", "mapping.rds")`
 #' @param dbname string, name of the database to use
 #' @return a named character vector of the same length and order as `ids`
@@ -28,6 +29,31 @@ tmod_db_map_ids <- function(x, ids, dbname, tmod_dbs_mapping_obj=NULL) {
   ret <- mapping[ids]
   if(all(is.na(ret))) {
     warning("No IDs were found in the mapping... are you sure you are using PrimaryIDs?\nCheck the annotation data frame (see `get_annot()`)")
+  }
+  names(ret) <- ids
+  return(ret)
+}
+
+#' @rdname tmod_db_map_ids
+tmod_rev_db_map_ids <- function(x, ids, dbname, tmod_dbs_mapping_obj=NULL) {
+
+  .check_de_obj(x)
+
+  if(is.null(tmod_dbs_mapping_obj)) {
+    tmod_dbs_mapping_obj <- get_object(x, step="tmod_dbs", extension="mapping.rds")
+  }
+
+  if(!dbname %in% names(tmod_dbs_mapping_obj$dbs)) {
+    stop(glue("No mapping for db {dbname} in the mapping object"))
+  }
+
+  mapping_id <- tmod_dbs_mapping_obj$dbs[dbname]
+  mapping    <- tmod_dbs_mapping_obj$maps[[mapping_id]]
+
+  #ret <- mapping[ids]
+  ret <- names(mapping)[ match(ids, mapping) ]
+  if(all(is.na(ret))) {
+    warning(glue("No IDs were found in the mapping... are you sure you are using the {dbname} IDs?\nCheck the annotation data frame (see `get_annot()`)"))
   }
   names(ret) <- ids
   return(ret)
@@ -84,6 +110,11 @@ plot_evidence <- function(x, id, dbname, contrast, sort="pval", contrast_obj=NUL
   tmod_dbs_mapping_obj=NULL, annot_obj=NULL, ...) {
 
   .check_de_obj(x)
+
+  if(is.null(tmod_dbs_obj)) {
+    message("Loading tmod dbs object (to speed up, use the tmod_dbs_obj option)")
+    tmod_dbs_obj <- get_tmod_dbs(x)
+  }
 
   if(is.null(annot_obj)) { annot_obj <- get_annot(x) }
   if(length(id) != 1L) {
@@ -247,7 +278,7 @@ test_gsea_tmod <- function(x, gl, dbname, tmod_dbs_obj=NULL, tmod_dbs_mapping_ob
 #' Produce a tabbed DT results table of gene set enrichment test.
 #' @param res results of a gene set enrichment test (e.g.  [test_gsea_tmod()])
 #' @param pval_thr report only results with FDR < pval_thr
-#' @param es_trh report only results with effect size > es_thr
+#' @param es_thr report only results with effect size > es_thr
 #' @import DT
 #' @importFrom knitr knit_child
 #' @seealso [test_gsea_tmod()]
@@ -275,7 +306,7 @@ datatable(res_tmp, extensions=c('Buttons','FixedColumns'), rownames=FALSE, escap
     if(is.null(.r)) {
       cat("\nNo results.\n")
     } else {
-      res_tmp <- .r %>% dplyr::filter(AUC > es_thr & adj.P.Val < pval_thr)
+      res_tmp <- .r %>% dplyr::filter(.data$AUC > es_thr & .data$adj.P.Val < pval_thr)
       if(nrow(res_tmp) < 1) {
         cat(sprintf("\nNo results below specified thresholds (ES > %.2f, p_val < %.2f).\n", es_thr, pval_thr))
       } else {

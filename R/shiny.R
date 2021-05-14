@@ -150,9 +150,9 @@ gene_browser <- function(pip) {
 
   # prepare the contrast tables
   cntr   <- get_contrasts(pip) %>% map(~ .x %>% rownames_to_column("PrimaryID")) %>% 
-    map(~ { .x %>% mutate(go= sprintf(but, PrimaryID)) }) %>%
+    map(~ { .x %>% mutate('>'= sprintf(but, PrimaryID)) }) %>%
     map(~ { .x %>% select(all_of(setdiff(colnames(.x), c("symbol", "entrez")))) }) %>%
-    map(~ { .x %>% { merge(annot, ., by="PrimaryID", all.x=TRUE) } %>% select(-baseMean, -stat, -lfcSE) %>% arrange(pvalue)})
+    map(~ { .x %>% { merge(annot, ., by="PrimaryID", all.x=TRUE) } %>% relocate(all_of(">"), .before=1) %>% select(-baseMean, -stat, -lfcSE) %>% arrange(pvalue)})
   config <- get_config(pip)
 
   covar  <- get_covariates(pip)

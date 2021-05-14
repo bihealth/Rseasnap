@@ -51,6 +51,31 @@ get_contrasts <- function(x, contrasts=NULL) {
   return(ret)
 }
 
+#' Get all results of tmod gene set enrichment analysis
+#'
+#' Get results of the tmod gene set enrichment analysis for all contrasts (default) or a
+#' selection of the contrasts.
+#' @param x an object of class seasnap_DE_pipeline
+#' @param contrasts an optional character vector of the contrasts to return
+#' @return a named list; each object of the list is a list of tmod results for the given contrast.
+#' @export
+get_tmod_res <- function(x, contrasts=NULL) {
+  .check_de_obj(x)
+
+  if(is.null(contrasts)) {
+    contrasts <- get_contrast_names(x)
+  }
+
+  ret <- lapply(contrasts, function(c) {
+    sel <- with(x$file_tab, step == "tmod" & contrast == c & extension == "rds")
+    path <- x$file_tab$filename[sel]
+    seasnap_readRDS(x, path)
+  })
+
+  names(ret) <- contrasts
+  return(ret)
+}
+
 #' Return the tmod gene set database objects
 #'
 #' Return the tmod gene set database objects

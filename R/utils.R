@@ -27,9 +27,9 @@ seasnap_readRDS <- function(x, path) {
   }
   fi <- file.info(path)$mtime[1]
 
-  if(ts < fi) {
-    warning(sprintf("Warning: file %s is newer than the pipeline config.\nYou should probably reload the pipeline with load_de_pipeline.", path))
-  }
+# if(ts < fi) {
+#   warning(sprintf("Warning: file %s is newer than the pipeline config.\nYou should probably reload the pipeline with load_de_pipeline.", path))
+# }
 
   ret <- readRDS(path)
   attr(ret, "timestamp") <- fi
