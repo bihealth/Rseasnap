@@ -1,6 +1,6 @@
 Package: Rseasnap
 Title: Utilities for the sea-snap pipeline
-Version: 0.1.2
+Version: 0.1.3
 Authors@R: 
     person(given = "January",
            family = "Weiner",
@@ -35,7 +35,8 @@ Imports:
     rlang,
     stats,
     bslib,
-    htmltools
+    htmltools,
+    thematic
 Suggests: 
     rmarkdown
 VignetteBuilder: knitr

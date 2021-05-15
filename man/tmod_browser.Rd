@@ -4,18 +4,25 @@
 \alias{tmod_browser}
 \title{Launch a browser of tmod gene set enrichment analysis results}
 \usage{
-tmod_browser(pip, tmod_dbs = NULL)
+tmod_browser(pip, tmod_dbs = NULL, tmod_res = NULL)
 }
 \arguments{
 \item{pip}{pipeline object returned by \code{load_de_pipeline}}
 
 \item{tmod_dbs}{tmod db object returned by get_tmod_dbs}
+
+\item{tmod_res}{tmod results object returned by get_tmod_res}
 }
 \value{
 does not return a value
 }
 \description{
 Launch a shiny-based browser of tmod gene set enrichment analysis results
+}
+\details{
+To speed up launching the browser, you can load the tmod_dbs and
+tmod_res objects first (using the functions get_tmod_dbs and
+get_tmod_res).
 }
 \examples{
 \dontrun{
