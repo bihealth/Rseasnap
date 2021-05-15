@@ -49,6 +49,7 @@
 tmodBrowserUI <- function(cntr_titles, dbs, sorting, but) {
 
   ui <- fluidPage(
+    useShinyjs(),
     theme = bs_theme(bootswatch = "sandstone"),
     fluidRow(titlePanel(h1("tmod browser")), class="bg-primary"),
     fluidRow(HTML("<hr>")),
@@ -57,7 +58,7 @@ tmodBrowserUI <- function(cntr_titles, dbs, sorting, but) {
          fluidRow(selectInput("contrast", label="Contrast", choices=cntr_titles, width="100%")),
          fluidRow(selectInput("db", label="Database", choices=dbs, width="100%")),
          fluidRow(selectInput("sort", label="Sorting", choices=sorting, width="100%")),
-         HTML(paste("Click on the", but, "buttons to view an expression profile"))
+         HTML(paste("Click on the", but, "buttons to view an evidence plot"))
       ),
       mainPanel(
         dataTableOutput("tmodResTab")
@@ -65,6 +66,7 @@ tmodBrowserUI <- function(cntr_titles, dbs, sorting, but) {
     ),
     sidebarLayout(
       sidebarPanel(
+        fluidRow(downloadButton("save", "Save plot", class="bg-success")),
         fluidRow(verbatimTextOutput("modinfo"))
       ),
       mainPanel(
@@ -90,8 +92,12 @@ tmodBrowserUI <- function(cntr_titles, dbs, sorting, but) {
 #' @return does not return a value
 #' @import dplyr
 #' @importFrom shiny shinyApp renderText renderPlot verbatimTextOutput textOutput renderUI uiOutput
-#' @importFrom shiny actionButton column fluidPage fluidRow h1 mainPanel plotOutput reactiveValues selectInput sidebarLayout sidebarPanel titlePanel 
+#' @importFrom shiny actionButton column fluidPage fluidRow h1 mainPanel plotOutput reactiveValues 
+#' @importFrom shiny selectInput sidebarLayout sidebarPanel titlePanel 
+#' @importFrom shiny downloadButton downloadHandler observeEvent reactiveVal
 #' @importFrom shiny showNotification removeNotification req
+#' @importFrom shinyjs disable enable useShinyjs
+#' @importFrom grDevices dev.off pdf
 #' @importFrom DT datatable formatSignif renderDataTable dataTableOutput
 #' @importFrom htmltools HTML
 #' @importFrom colorDF summary_colorDF
@@ -132,6 +138,7 @@ tmod_browser <- function(pip, tmod_dbs=NULL, tmod_res=NULL) {
   ui <- tmodBrowserUI(cntr_titles, dbs, sorting, but)
 
   server <- function(input, output, session) {
+    disable("save")
     output$tmodResTab <- renderDataTable({
       id <- showNotification("Rendering table...", duration = NULL, closeButton = FALSE)
       on.exit(removeNotification(id), add = TRUE)
@@ -151,9 +158,29 @@ tmod_browser <- function(pip, tmod_dbs=NULL, tmod_res=NULL) {
       return(ret)
     })
 
-    output$evidencePlot <- renderPlot({
+    output$save <- downloadHandler(
+      filename = function() {
+        req(selvar$id)
+        ret <- sprintf("evidence_plot_%s_%s_%s.pdf",
+                       selvar$db,
+                       selvar$cntr,
+                       selvar$id)
+        return(ret)
+      },
+      content = function(file) {
+        req(selvar$id)
+        pdf(file=file, width=8, height=5)
+        title <- sprintf("%s / %s\nContrast: %s / %s", 
+                         selvar$id, selvar$db, selvar$cntr, selvar$sort)
+        plot_evidence(pip, id=selvar$id, dbname=selvar$db, contrast=selvar$cntr,
+                      tmod_dbs_obj=tmod_dbs, tmod_dbs_mapping_obj=tmod_map, main=title)
+        dev.off()
+      }
+    )
 
+    output$evidencePlot <- renderPlot({
       req(input$select_button)
+      enable("save")
       id <- gsub("go_", "", input$select_button)
       tmp <- unlist(strsplit(gsub("go_", "", id), "-!-"))
       names(tmp) <- c("id", "cntr", "db", "sort")
@@ -208,12 +235,14 @@ tmod_browser <- function(pip, tmod_dbs=NULL, tmod_res=NULL) {
 geneBrowserUI <- function(cntr_titles, all_covars, default_covar, but) {
 
   ui <- fluidPage(
+    useShinyjs(),
     theme = bs_theme(bootswatch = "united"),
     fluidRow(titlePanel(h1("Gene browser")), class="bg-primary"),
     fluidRow(HTML("<hr>")),
     fluidRow(
-      column(2, selectInput("contrast", label = "Dataset", choices = cntr_titles),
-        HTML(paste("Click on the", but, "buttons to view an expression profile"))
+      column(2, selectInput("contrast", label = "Contrast", choices = cntr_titles),
+        HTML(paste("Click on the", but, "buttons to view an expression profile<br/>")),
+        downloadButton("save", "Save plot to PDF", class="bg-success")
              ),
       column(10, dataTableOutput("result_tbl"))
       ),
@@ -224,7 +253,7 @@ geneBrowserUI <- function(cntr_titles, all_covars, default_covar, but) {
        fluidRow(selectInput("colorBy", "Color by", c("N/A", all_covars), selected="N/A", width="100%")),
        fluidRow(selectInput("symbolBy", "Symbol by", c("N/A", all_covars), selected="N/A", width="100%")),
        fluidRow(textOutput("addInfo")),
-       fluidRow(verbatimTextOutput("geneData"))
+       fluidRow(verbatimTextOutput("geneData")),
     ),
 
     mainPanel(
@@ -305,42 +334,62 @@ gene_browser <- function(pip, cntr=NULL, annot=NULL) {
 
   ## prepare the server
   server <- function(input, output, session) {
+    disable("save")
+
+    gene_id <- reactiveVal("")
+
+    observeEvent(input$select_button, {
+      gene_id(gsub("^go_", "", input$select_button))
+    })
+
     output$id_summary <- renderText({
       .cntr <- input$contrast
       sprintf("Contrast is %s", .cntr)
     })
 
     output$result_tbl <- DT::renderDataTable({
-      id <- showNotification("Rendering table...", duration = NULL, closeButton = FALSE)
-      on.exit(removeNotification(id), add = TRUE)
       datatable(cntr[[ input$contrast ]], escape=FALSE, selection='none', options=list(pageLength=5)) %>%
         formatSignif(columns=intersect(colnames(cntr[[ input$contrast ]]), 
                                        c("baseMean", "log2FoldChange", "pvalue", "padj")), digits=2)
     })
 
-    output$geneData <- renderText({
-      id <- gsub("go_", "", input$select_button)
-      if(length(id) == 0) {
-        id <- rownames(rld)[1]
+    output$save <- downloadHandler(
+      filename = function() {
+        req(gene_id())
+        ret <- sprintf("expression_profile_%s_covarX_%s_colorBy_%s_groupBy_%s_symbolBy_%s.pdf",
+                       gene_id(), input$covarName, input$colorBy, input$groupBy, input$symbolBy)
+        ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
+        return(ret)
+      },
+      content = function(file) {
+        req(gene_id())
+        pdf(file=file, width=8, height=5)
+        g <- .gene_browser_plot(pip, covar, gene_id(), input$covarName, rld, annot, 
+                           input$groupBy, input$colorBy, input$symbolBy)
+        print(g)
+        dev.off()
       }
+    )
 
+    output$geneData <- renderText({
+      req(gene_id())
       sprintf("PrimaryID: %s\nSymbol: %s\nDescription: %s",
-              id,
-              annot[match(id, annot$PrimaryID), "SYMBOL"],
-              annot[match(id, annot$PrimaryID), "GENENAME"])
+              gene_id(),
+              annot[match(gene_id(), annot$PrimaryID), "SYMBOL"],
+              annot[match(gene_id(), annot$PrimaryID), "GENENAME"])
     })
 
     output$addInfo <- renderText({
-      req(input$select_button)
-      id <- gsub("go_", "", input$select_button)
-      ret <- .gene_browser_info_tab(id, covar[[input$covarName]], rld[id, ])
+      req(gene_id())
+      ret <- .gene_browser_info_tab(gene_id(), covar[[input$covarName]], rld[gene_id(), ])
       return(ret)
     })
 
     output$countsplot <- renderPlot({
-      req(input$select_button)
-      id <- gsub("go_", "", input$select_button)
-      .gene_browser_plot(pip, covar, id, input$covarName, rld, annot, input$groupBy, input$colorBy, input$symbolBy)
+      req(gene_id())
+      enable("save")
+      .gene_browser_plot(pip, covar, gene_id(), input$covarName, rld, annot, 
+                         input$groupBy, input$colorBy, input$symbolBy)
     })
   }
 

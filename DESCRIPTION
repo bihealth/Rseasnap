@@ -36,7 +36,8 @@ Imports:
     stats,
     bslib,
     htmltools,
-    thematic
+    thematic,
+    shinyjs
 Suggests: 
     rmarkdown
 VignetteBuilder: knitr
