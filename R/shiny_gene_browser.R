@@ -73,8 +73,13 @@ geneBrowserTableUI <- function(id, cntr_titles) {
   but <- actionButton("foo", label=" > ", class = "btn-primary btn-sm")
   sidebarLayout(
     sidebarPanel(
+        fluidRow(selectInput(NS(id, "contrast"), label = "Contrast", choices = cntr_titles, width="100%")),
+        fluidRow(
+                 numericInput(NS(id, "f_lfc"),    label="Filter by abs(LFC)", min=0, value=0.5, step=.1, width="30%"),
+                 numericInput(NS(id, "f_pval"),    label="Filter by FDR", min=0, max=1.0, value=0.05, step=.1, width="30%"),
+                 selectInput(NS(id, "f_dir"), label="Direction", choices=c(Any="an", Up="up", "Down"="dw"), width="40%")
+                 ),
       tagList(
-        selectInput(NS(id, "contrast"), label = "Contrast", choices = cntr_titles),
         HTML(paste("Click on the", but, "buttons to view an expression profile<br/>"))
       ),
       width=3
@@ -116,7 +121,15 @@ geneBrowserTableServer <- function(id, cntr, annot) {
     })
 
     output$result_tbl <- DT::renderDataTable({
-      datatable(cntr[[ input$contrast ]], escape=FALSE, selection='none', options=list(pageLength=5)) %>%
+      res <- cntr[[ input$contrast ]]
+      if(input$f_dir == "up") {
+        res <- res %>% filter(.data[["log2FoldChange"]] > 0)
+      } else if(input$f_dir == "dw") {
+        res <- res %>% filter(.data[["log2FoldChange"]] < 0)
+      }
+
+      res %>% filter(.data[["padj"]] < input$f_pval & abs(.data[["log2FoldChange"]]) > input$f_lfc) %>%
+      datatable(escape=FALSE, selection='none', options=list(pageLength=5)) %>%
         formatSignif(columns=intersect(colnames(cntr[[ input$contrast ]]), 
                                        c("baseMean", "log2FoldChange", "pvalue", "padj")), digits=2)
     })

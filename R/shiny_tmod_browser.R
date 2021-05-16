@@ -115,11 +115,17 @@ tmodBrowserTableUI <- function(id, cntr_titles, dbs, sorting) {
 
   ui <- sidebarLayout(
           sidebarPanel(
-             fluidRow(selectInput(NS(id, "contrast"), label="Contrast", choices=cntr_titles, width="100%")),
-             fluidRow(selectInput(NS(id, "db"),       label="Database", choices=dbs,         width="100%")),
-             fluidRow(selectInput(NS(id, "sort"),     label="Sorting",  choices=sorting,     width="100%")),
-             HTML(paste("Click on the", as.character(but), "buttons to view an evidence plot")),
-             width=3
+           fluidRow(selectInput(NS(id, "contrast"), label="Contrast", choices=cntr_titles, width="100%")),
+           fluidRow(selectInput(NS(id, "db"),       label="Database", choices=dbs,         width="100%")),
+           fluidRow(selectInput(NS(id, "sort"),     label="Sorting",  choices=sorting,     width="100%")),
+           fluidRow(
+             numericInput(NS(id, "f_auc"),  label="Filter by AUC", 
+                          min=.5, max=1.0, step=0.1, value=0.65, width="50%"),
+             numericInput(NS(id, "f_pval"), label="Filter by FDR", 
+                          min=0, max=1.0, step=0.1, value=0.05, width="50%")
+                    ),
+           HTML(paste("Click on the", as.character(but), "buttons to view an evidence plot")),
+           width=3
           ),
           mainPanel(
             dataTableOutput(NS(id, "tmodResTab")),
@@ -143,7 +149,8 @@ tmodBrowserTableServer <- function(id, pip, tmod_res) {
     tmod_res <- .tmod_browser_prepare_res(pip, as.character(but), tmod_res)
 
     output$tmodResTab <- renderDataTable({
-      res <- tmod_res[[input$contrast]][[input$db]][[input$sort]]
+      res <- tmod_res[[input$contrast]][[input$db]][[input$sort]] %>%
+        filter(.data[["AUC"]] > input$f_auc & .data[["adj.P.Val"]] < input$f_pval)
       datatable(res, escape=FALSE, selection='none', options=list(pageLength=5)) %>%
         formatSignif(columns=intersect(colnames(res), 
                                        c("AUC", "cerno", "P.Value", "adj.P.Val")), digits=2)
@@ -176,7 +183,7 @@ tmodBrowserTableServer <- function(id, pip, tmod_res) {
 #' @importFrom shiny actionButton column fluidPage fluidRow h1 mainPanel plotOutput reactiveValues 
 #' @importFrom shiny selectInput sidebarLayout sidebarPanel titlePanel tabPanel navbarPage
 #' @importFrom shiny downloadButton downloadHandler observeEvent reactiveVal
-#' @importFrom shiny showNotification removeNotification req
+#' @importFrom shiny showNotification removeNotification req numericInput
 #' @importFrom shiny NS reactive is.reactive tagList moduleServer HTML h1 h2 h3
 #' @importFrom shinyjs disable enable useShinyjs 
 #' @importFrom grDevices dev.off pdf
