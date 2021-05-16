@@ -35,7 +35,6 @@ Imports:
     rlang,
     stats,
     bslib,
-    htmltools,
     thematic,
     shinyjs
 Suggests: 

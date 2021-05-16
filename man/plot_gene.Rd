@@ -2,15 +2,29 @@
 % Please edit documentation in R/plot.R
 \name{plot_gene}
 \alias{plot_gene}
+\alias{plot_gene_generic}
 \title{Show gene expression in relation to a covariate}
 \usage{
 plot_gene(
   x,
   id,
   xCovar,
-  rld = NULL,
-  annot = NULL,
+  exprs = NULL,
   covar = NULL,
+  annot = NULL,
+  groupBy = NA,
+  colorBy = NA,
+  symbolBy = NA
+)
+
+plot_gene_generic(
+  id,
+  xCovar,
+  exprs,
+  covar,
+  annot = NULL,
+  annot_id_col = "PrimaryID",
+  annot_symb_col = "SYMBOL",
   groupBy = NA,
   colorBy = NA,
   symbolBy = NA
@@ -23,23 +37,31 @@ plot_gene(
 
 \item{xCovar}{the x covariate – column name from the covariate table}
 
-\item{rld}{gene expression matrix to show on the y axis; rownames must
+\item{exprs}{gene expression matrix to show on the y axis; rownames must
 be PrimaryIDs. If NULL, the rld object from the pipeline is used.}
+
+\item{covar}{the covariate data frame containing the column \code{xCovar}}
 
 \item{annot}{annotation data frame (as returned by the get_annot()
 function). If empty, it will be loaded.}
-
-\item{covar}{the covariate data frame containing the column \code{xCovar}}
 
 \item{groupBy}{name of the covariate column by which to group and connect by lines the data points}
 
 \item{colorBy}{name of the covariate column by which to color the data}
 
 \item{symbolBy}{name of the covariate column by which to select point symbols}
+
+\item{annot_id_col}{name of the column in the annot data frame which corresponds to the rownames of the expression matrix.}
+
+\item{annot_symb_col}{name of the column in the annot data frame which should be added to the title of the plot.}
 }
 \value{
 a ggplot2 object
 }
 \description{
 Show gene expression in relation to a covariate
+}
+\details{
+The \code{plot_gene} function is specifically for the sea-snap pipeline
+objects. the \code{plot_gene_generic} variant can be used with any data.
 }

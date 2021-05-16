@@ -457,12 +457,17 @@ plot_ly_pca <- function(mtx, covariate_data, threeD=TRUE, cov_default=NULL) {
 #' Show gene expression in relation to a covariate
 #'
 #' Show gene expression in relation to a covariate
+#'
+#' The `plot_gene` function is specifically for the sea-snap pipeline
+#' objects. the `plot_gene_generic` variant can be used with any data.
 #' 
 #' @param x pipeline object returned by `load_de_pipeline()`
 #' @param id PrimaryID of the gene (usually ENSEMBL ID)
 #' @param xCovar the x covariate – column name from the covariate table
-#' @param rld gene expression matrix to show on the y axis; rownames must
+#' @param exprs gene expression matrix to show on the y axis; rownames must
 #'        be PrimaryIDs. If NULL, the rld object from the pipeline is used.
+#' @param annot_symb_col name of the column in the annot data frame which should be added to the title of the plot.
+#' @param annot_id_col name of the column in the annot data frame which corresponds to the rownames of the expression matrix. 
 #' @param annot annotation data frame (as returned by the get_annot()
 #'        function). If empty, it will be loaded.
 #' @param covar the covariate data frame containing the column `xCovar`
@@ -473,12 +478,12 @@ plot_ly_pca <- function(mtx, covariate_data, threeD=TRUE, cov_default=NULL) {
 #' @import ggplot2 
 #' @import cowplot
 #' @export
-plot_gene <- function(x, id, xCovar, rld=NULL, annot=NULL, covar=NULL,
+plot_gene <- function(x, id, xCovar, exprs=NULL, covar=NULL, annot=NULL, 
                                groupBy = NA, colorBy = NA, symbolBy = NA) {
-  if(is.null(rld)) {
+  if(is.null(exprs)) {
     message("loading RLD")
-    rld <- get_object(x, step="DESeq2", extension="rld.blind.rds") 
-    rld <- rld@assays@data@listData[[1]]
+    exprs <- get_object(x, step="DESeq2", extension="rld.blind.rds") 
+    exprs <- exprs@assays@data@listData[[1]]
   }
 
   if(is.null(annot)) { 
@@ -492,9 +497,26 @@ plot_gene <- function(x, id, xCovar, rld=NULL, annot=NULL, covar=NULL,
     stop(sprintf("PrimaryID %s not found in annotation object", id))
   }
 
+  g <- plot_gene_generic(id, xCovar, exprs, covar, annot, groupBy=groupBy,
+                    colorBy=colorBy, symbolBy=symbolBy)
+  return(g)
+}
 
-  df <- data.frame(covar, Expression=rld[id, ])
-  title <- sprintf("%s (%s)", id, annot[ match(id, annot$PrimaryID), ][["SYMBOL"]])
+
+#' @rdname plot_gene
+#' @export
+plot_gene_generic <- function(id, xCovar, exprs, covar, annot=NULL, 
+                               annot_id_col="PrimaryID",
+                               annot_symb_col="SYMBOL",
+                               groupBy = NA, colorBy = NA, symbolBy = NA) {
+
+  df <- data.frame(covar, Expression=exprs[id, ])
+  if(!is.null(annot)) {
+    title <- sprintf("%s (%s)", id, annot[ match(id, annot[[annot_id_col]]), ][[annot_symb_col]])
+  } else {
+    title <- id
+  }
+  message(title)
 
   if(!is.na(colorBy)) {
     if(!is.na(groupBy)) {
@@ -529,7 +551,6 @@ plot_gene <- function(x, id, xCovar, rld=NULL, annot=NULL, covar=NULL,
 
   return(g)
 }
-
 
 
 
