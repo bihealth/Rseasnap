@@ -179,12 +179,16 @@ tmodBrowserTableServer <- function(id, pip, tmod_res) {
 #' @param annot annotation data frame as returned by `get_annot`
 #' @return does not return a value
 #' @import dplyr
-#' @importFrom shiny shinyApp renderText renderPlot verbatimTextOutput textOutput renderUI uiOutput
-#' @importFrom shiny actionButton column fluidPage fluidRow h1 mainPanel plotOutput reactiveValues 
-#' @importFrom shiny selectInput sidebarLayout sidebarPanel titlePanel tabPanel navbarPage
-#' @importFrom shiny downloadButton downloadHandler observeEvent reactiveVal
+#' @importFrom shiny shinyApp renderText verbatimTextOutput textOutput renderUI uiOutput
+#' @importFrom shiny tableOutput renderTable renderPlot plotOutput 
+#' @importFrom shiny column fluidPage fluidRow mainPanel 
+#' @importFrom shiny actionButton reactiveValues eventReactive
+#' @importFrom shiny sidebarLayout sidebarPanel titlePanel tabPanel navbarPage updateNavbarPage
+#' @importFrom shiny selectInput numericInput sliderInput checkboxInput
+#' @importFrom shiny downloadButton downloadHandler observeEvent reactiveVal isolate
 #' @importFrom shiny showNotification removeNotification req numericInput
-#' @importFrom shiny NS reactive is.reactive tagList moduleServer HTML h1 h2 h3
+#' @importFrom shiny NS reactive is.reactive tagList moduleServer HTML h1 h2 h3 h4
+#' @importFrom shiny nearPoints hoverOpts brushedPoints
 #' @importFrom shinyjs disable enable useShinyjs 
 #' @importFrom grDevices dev.off pdf
 #' @importFrom DT datatable formatSignif renderDataTable dataTableOutput

@@ -51,6 +51,8 @@ disco_color_scale <- function(x, lower=-100, upper=100, int=255, alpha="66") {
 #'        disco scores be shown, or only for the absolute top, whether only negative
 #'        or only positive or both?
 #' @param alpha transparency
+#' @param disco result of `disco_score`; if provided, it will be used to
+#'        avoid unnecessary computations
 #' @examples
 #' ## Generate example data
 #' c1 <- data.frame(log2FoldChange=rnorm(5000, sd=2))
@@ -65,9 +67,14 @@ disco_color_scale <- function(x, lower=-100, upper=100, int=255, alpha="66") {
 #' @importFrom stats cor
 #' @export
 plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
-  show_top_labels=0, top_labels_both=TRUE, annot=NULL, alpha=.5) {
+  show_top_labels=0, top_labels_both=TRUE, annot=NULL, alpha=.5, disco=NULL) {
 
-  cc <- disco_score(contrast1, contrast2)
+  if(is.null(disco)) {
+    cc <- disco_score(contrast1, contrast2)
+  } else {
+    cc <- disco
+  }
+
   cc$col <- disco_color_scale(cc$disco, lower=lower, upper=upper)
   cc <- cc[ order(-abs(cc$disco)), ]
 
@@ -98,7 +105,7 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
     arrange(abs(.data$disco))
 
 
-  g <- ggplot(cc, aes(x=.data$log2FoldChange.x, y=.data$log2FoldChange.y)) +
+  g <- ggplot(cc, aes_string(x="log2FoldChange.x", y="log2FoldChange.y")) +
     geom_point(aes(color=.data$disco), alpha=alpha) + 
     scale_color_gradient2(low="blue", mid="grey", high="red") + 
     theme(legend.position="none") +
@@ -476,7 +483,6 @@ plot_ly_pca <- function(mtx, covariate_data, threeD=TRUE, cov_default=NULL) {
 #' @param colorBy name of the covariate column by which to color the data
 #' @return a ggplot2 object
 #' @import ggplot2 
-#' @import cowplot
 #' @export
 plot_gene <- function(x, id, xCovar, exprs=NULL, covar=NULL, annot=NULL, 
                                groupBy = NA, colorBy = NA, symbolBy = NA) {
@@ -516,7 +522,6 @@ plot_gene_generic <- function(id, xCovar, exprs, covar, annot=NULL,
   } else {
     title <- id
   }
-  message(title)
 
   if(!is.na(colorBy)) {
     if(!is.na(groupBy)) {
@@ -547,7 +552,7 @@ plot_gene_generic <- function(id, xCovar, exprs, covar, annot=NULL,
   }
 
 
-  g  <- g + ggtitle(title) + theme_cowplot()
+  g  <- g + ggtitle(title)
 
   return(g)
 }

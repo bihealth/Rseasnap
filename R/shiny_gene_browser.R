@@ -13,7 +13,6 @@
 ## Wrapper around plot_gene, mainly to replace "N/A" with NA
 .gene_browser_plot <- function(covar, id, covarName, rld, annot, 
                                groupBy = "N/A", colorBy = "N/A", symbolBy = "N/A") {
-  message("plotting...")
   .args <- list(id=id, xCovar=covarName, covar=covar, exprs=rld, groupBy=groupBy, annot=annot,
                 colorBy=colorBy, symbolBy=symbolBy)
   ## weirdly, the line below is really, really slow
@@ -46,7 +45,6 @@
 
 ## prepare the additional gene info tab panel
 .gene_browser_info_tab <- function(id, x, y, covar) {
-     message("calculating info")
      ret <- ""
 
      if(is.numeric(x)) {
@@ -62,12 +60,7 @@
      return(ret)
 }
 
-#' Create a shiny UI for a gene expression table browser
-#'
-#' Create a shiny UI for a gene expression table browser
-#'
-#' @param id identifier for the namespace of the module
-#' @param cntr_titles named character vector for contrast choices
+#' @rdname geneBrowserTableServer
 #' @export
 geneBrowserTableUI <- function(id, cntr_titles) {
   but <- actionButton("foo", label=" > ", class = "btn-primary btn-sm")
@@ -98,8 +91,9 @@ geneBrowserTableUI <- function(id, cntr_titles) {
 #' @param cntr a list of data frames containing the DE analysis results
 #' @param annot annotation data frame containing column 'PrimaryID'
 #'        corresponding to the rownames of the contrast data frames
-#' @param id identifier (same as the one passed to geneBrowserTableUI)
-#' @return reactive value returning gene ID
+#' @param id identifier for the namespace of the module
+#' @param cntr_titles named character vector for contrast choices
+#' @return reactive value containing the gene ID
 #' @export
 geneBrowserTableServer <- function(id, cntr, annot) {
   moduleServer(id, function(input, output, session) {
@@ -138,7 +132,8 @@ geneBrowserTableServer <- function(id, cntr, annot) {
   })
 }
 
-
+#' @rdname geneBrowserPlotServer
+#' @export
 geneBrowserPlotUI <- function(id, covar) {
   all_covars         <- covar %>% summary_colorDF() %>% filter(unique > 1) %>% pull(.data$Col)
   default_covar <- .default_covar(covar, all_covars, default="group")
@@ -162,7 +157,17 @@ geneBrowserPlotUI <- function(id, covar) {
   )
 }
 
-
+#' Shiny Module – gene browser expression profile plot
+#'
+#' Shiny Module – gene browser expression profile plot
+#' @param gene_id primary identifier of the gene to show
+#' @param exprs expression matrix; row names must correspond to the primary identifiers
+#' @param annot annotation data frame containing column 'PrimaryID'
+#'        corresponding to the rownames of the contrast data frames
+#' @param id identifier (same as the one passed to geneBrowserTableUI)
+#' @param covar data frame with all covariates
+#' @return does not return anything useful
+#' @export
 geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot) {
   stopifnot(is.reactive(gene_id))
   stopifnot(!is.reactive(covar))
@@ -172,6 +177,7 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot) {
   moduleServer(id, function(input, output, session) {
     disable("save")
 
+    ## Save figure as a PDF
     output$save <- downloadHandler(
       filename = function() {
         req(gene_id())
@@ -199,12 +205,14 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot) {
               annot[match(gene_id(), annot$PrimaryID), "GENENAME"])
     })
 
+    ## Additional information - e.g. correlation coefficient if the
+    ## covariate is numeric
     output$addInfo <- renderText({
       req(gene_id())
-      ret <- .gene_browser_info_tab(gene_id(), covar[[input$covarName]], exprs[gene_id(), ])
-      return(ret)
+      .gene_browser_info_tab(gene_id(), covar[[input$covarName]], exprs[gene_id(), ])
     })
 
+    ## The actual plot
     output$countsplot <- renderPlot({
       req(gene_id())
       enable("save")

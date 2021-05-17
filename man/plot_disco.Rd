@@ -12,7 +12,8 @@ plot_disco(
   show_top_labels = 0,
   top_labels_both = TRUE,
   annot = NULL,
-  alpha = 0.5
+  alpha = 0.5,
+  disco = NULL
 )
 }
 \arguments{
@@ -32,6 +33,9 @@ or only positive or both?}
 frame with columns "PrimaryID" and "SYMBOL"}
 
 \item{alpha}{transparency}
+
+\item{disco}{result of \code{disco_score}; if provided, it will be used to
+avoid unnecessary computations}
 }
 \value{
 a ggplot object (plot)

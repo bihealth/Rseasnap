@@ -16,6 +16,7 @@
 #' @param tmod_res tmod results returned by `get_tmod_res`
 #' @export
 pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs=NULL) {
+  theme_set(theme_bw())
 
   message("preparing...")
   if(is.null(annot)) {
@@ -46,35 +47,54 @@ pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs
   dbs <- names(tmod_dbs)
   sorting <- config$tmod$sort_by
 
-  all_covars    <- covar %>% summary_colorDF() %>% filter(unique > 1) %>% pull(.data$Col)
-  default_covar <- .default_covar(covar, all_covars, default="group")
-
   rld    <- get_object(pip, step="DESeq2", extension="rld.blind.rds")
   rld    <- rld@assays@data@listData[[1]]
   
   cntr_titles <- map_chr(config$contrasts$contrast_list, `[[`, "ID")
   names(cntr_titles) <- map_chr(config$contrasts$contrast_list, `[[`, "title")
+  cntr_titles <- cntr_titles[ cntr_titles %in% names(cntr) ]
 
   thematic_shiny(font="auto")
 
   ui <- navbarPage(
       "Sea-snap pipeline browser",
-      theme = bs_theme(bootswatch = "united"),
+      id = "navid",
+      theme = bs_theme(primary = "#47336F", secondary = "#C6B3EB", 
+                              font_scale = NULL, 
+                              `enable-shadows` = TRUE, 
+                              bootswatch = "united"),
         tabPanel(h3("Gene browser"),
+            fluidRow(verbatimTextOutput("msg")),
             geneBrowserTableUI("geneT", cntr_titles),
-            geneBrowserPlotUI("geneP", covar)
+            geneBrowserPlotUI("geneP", covar),
+            value="gbrowser"
           ),
         tabPanel(h3("tmod browser"),
             tmodBrowserTableUI("tmodT", cntr_titles, dbs, sorting),
-            tmodBrowserPlotUI("tmodP")
+            tmodBrowserPlotUI("tmodP"),
+            value="tbrowser"
+        ),
+        tabPanel(h3("disco"),
+            discoUI("disco", cntr_titles),
+            value="disco"
         ),
         useShinyjs()
     )
   server <- function(input, output, session) {
-    gene_id <- geneBrowserTableServer("geneT", cntr, annot)
-    geneBrowserPlotServer("geneP", gene_id, covar, rld, annot)
+    gene_id1 <- geneBrowserTableServer("geneT", cntr, annot)
     mod_id <- tmodBrowserTableServer("tmodT", pip, tmod_res)
     tmodBrowserPlotServer("tmodP", mod_id, pip, tmod_dbs, tmod_map, cntr)
+    gene_id2 <- discoServer("disco", cntr, annot)
+
+    ## combine events selecting a gene from gene browser and from disco
+    gene_id <- reactiveVal()
+    observeEvent(gene_id1(), { gene_id(gene_id1()) })
+    observeEvent(gene_id2(), { 
+      updateNavbarPage(session, "navid", "gbrowser")
+      gene_id(gene_id2())
+    })
+
+    geneBrowserPlotServer("geneP", gene_id, covar, rld, annot)
   }
 
   shinyApp(ui, server)
