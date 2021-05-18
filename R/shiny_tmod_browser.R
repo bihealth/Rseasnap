@@ -44,6 +44,9 @@
   return(ret)
 }
 
+
+#' @rdname tmodBrowserPlotServer
+#' @export
 tmodBrowserPlotUI <- function(id) {
     sidebarLayout(
       sidebarPanel(
@@ -59,7 +62,21 @@ tmodBrowserPlotUI <- function(id) {
     )
 }
 
+
+
 ## server module for viewing evidence plots
+
+#' Shiny Module – tmod browser evidence plots
+#'
+#' Shiny Module – gene browser evidence plots
+#' @param selmod identifier of the gene set to plot
+#' @param pip pipeline object returned by `load_de_pipeline`
+#' @param tmod_dbs tmod gene set databases returned by `get_tmod_dbs()`
+#' @param tmod_map tmod gene set ID mapping returned by `get_tmod_mapping()`
+#' @param id identifier (same as the one passed to geneBrowserTableUI)
+#' @param cntr list of contrast results returned by `get_contrasts()`
+#' @return does not return anything useful
+#' @export
 tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr) {
   moduleServer(id, function(input, output, session) {
     message("Launching tmod plot server")
@@ -108,7 +125,8 @@ tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr) {
 }
 
 
-## returns the UI of the tmod browser
+#' @rdname tmodBrowserTableServer
+#' @export
 tmodBrowserTableUI <- function(id, cntr_titles, dbs, sorting) {
 
   but <- actionButton("uselessID", label=" > ", class = "btn-primary btn-sm")
@@ -136,8 +154,17 @@ tmodBrowserTableUI <- function(id, cntr_titles, dbs, sorting) {
   return(ui)
 }
 
-## Server module for the tmod results browser. moduleServer returns a reactive
-## containing the module id, contrast id, db name and sort type.
+#' Shiny Module – tmod results browser table selection
+#'
+#' Shiny Module – tmod results browser table selection
+#' @param tmod_res results of tmod analysis, returned by `get_tmod_res`
+#' @param cntr_titles possibly named character vector with contrast names
+#' @param dbs character vector with database names
+#' @param sorting character vector with sorting options available
+#' @param id identifier for the namespace of the module
+#' @param pip pipeline object returned by `load_de_pipeline`
+#' @return reactive value producing a list containing the module id, contrast id, db name and sort type.
+#' @export
 tmodBrowserTableServer <- function(id, pip, tmod_res) {
 
   moduleServer(id, function(input, output, session) {

@@ -51,6 +51,19 @@ get_contrasts <- function(x, contrasts=NULL) {
   return(ret)
 }
 
+#' Get all counts from the pipeline
+#'
+#' Get counts from the import_gene_counts step
+#' @param x an object of class seasnap_DE_pipeline
+#' @return a matrix with raw counts, rownames corresponding to PrimaryIDs
+#'         and column names corresponding to sample names
+#' @export
+get_counts <- function(x) {
+  rds <- get_object(x, step="DESeq2", extension="deseq2.rds")
+  rds@assays@data[[1]]
+}
+
+
 #' Get all results of tmod gene set enrichment analysis
 #'
 #' Get results of the tmod gene set enrichment analysis for all contrasts (default) or a

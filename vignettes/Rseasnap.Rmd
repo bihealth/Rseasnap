@@ -1,6 +1,8 @@
 ---
 title: "Using Rseasnap for fun and profit"
-output: rmarkdown::html_vignette
+output: 
+  rmarkdown::html_vignette:
+    toc: true
 vignette: >
   %\VignetteIndexEntry{Using Rseasnap for fun and profit}
   %\VignetteEngine{knitr::rmarkdown}
@@ -14,6 +16,238 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+
+# Quick start
+
+```{r}
+# Minimal example included in the package
 library(Rseasnap)
+example_pipeline_file <- file.path(
+  system.file("extdata", package="Rseasnap"),
+  "example_pipeline",
+  "DE_config.yaml")
+pip <- load_de_pipeline(config_file=example_pipeline_file)
+
+# get the DESeq2 object
+ds <- get_deseq2(pip)
+
+# get the file tab
+file_tab <- get_file_tab(pip)
+
+# plot expression of a gene
+
+# launch the browser
+if(interactive()) {
+  pipeline_browser(pip)
+}
 ```
+
+
+
+# Using Rseasnap with sea-snap pipelines
+
+## Loading a pipeline
+
+Basic usage: assuming that `DE_config.yaml` is the name of the
+configuration file of the DE pipeline, load the pipeline with
+
+```{r eval=FALSE}
+library(Rseasnap)
+pip <- load_de_pipeline(config_file="DE_config.yaml")
+```
+
+Using the `pip` object, you now can conveniently extract objects from the
+pipeline, create visualisations or launch an interactive shiny app.
+
+## Getting objects from the pipeline
+
+Use the `get_*()` functions to read the RDS files stored in the pipeline
+and extract objects:
+
+```{r eval=FALSE}
+file_tab <- get_file_tab(pip)
+ds2      <- get_deseq2(pip)
+cntr     <- get_contrasts(pip)
+cntr_ids <- get_contrast_names(pip)
+covar    <- get_covariates(pip)
+config   <- get_config(pip)
+annot    <- get_annot(pip)
+tmod     <- get_tmod_res(pip)
+tmod_dbs <- get_tmod_dbs(pip)
+tmod_map <- get_tmod_mapping(pip)
+```
+
+Anything not included in the commands above can be extracted using
+`get_object()`. This reads the `file_tab` and extracts object or objects
+for the given contrast, step and extension:
+
+```{r eval=FALSE}
+obj <- get_object(pip, step="DESeq2", extension="rld.blind.rds")
+```
+
+Note that reading of files other than RDS is not supported.
+
+## Storing objects for future use
+
+Some of the objects (notably `tmod_dbs`) are quite large, so if you plan to
+repeatedly, say, generate tmod evidence plots or run the pipeline browser,
+it makes sens to pre-load them and use them as an optional argument for
+other functions, e.g.:
+
+```{r eval=FALSE}
+tmod_dbs <- get_tmod_dbs(pip)
+pipeline_browser(pip, tmod_dbs=tmod_dbs)
+```
+
+
+# Visualizations
+
+## Transcription profiles
+
+There are two functions for plotting transcription profiles, `plot_gene`
+and `plot_gene_generic`, the former specifically for sea-snap pipelines and
+the latter for any sort of expression data (`plot_gene` is just a wrapper
+around `plot_gene_generic` loading the data first from the pipeline if
+necessary).
+
+Both functions need a covariate data frame and a covariate name rather than
+a covariate vector, and an expression matrix and gene ID rather than a
+numeric vector. Both functions return a ggplot2 object.
+
+If the x covariate is not numeric, then the default plot is
+a box plot with a jitter plot overlayed (unless the data is grouped by a
+variable, eg. patient ID, in which case it is a simple dot plot with
+lines). If the covariate is numeric, then the result is a regular
+scatterplot. 
+
+The parameters `symbolBy` and `colorBy` can be used to select covariates
+for symbols and colors.
+
+```{r, fig.width=8,fig.height=4}
+library(cowplot)
+library(ggplot2)
+theme_set(theme_bw())
+g1 <- plot_gene(pip, "ENSG00000131747", "group.icu")
+g2 <- plot_gene(pip, "ENSG00000131747", "fibrinogen",
+  colorBy="group", symbolBy="icu")
+plot_grid(g1, g2)
+```
+
+As these are ggplot2 objects, all the parameters can be modified:
+
+```{r fig.width=4,fig.height=4}
+g1$layers[[2]]$aes_params$size <- 1
+g1
+```
+
+
+To make these plots faster, load the annotation and expression data first
+and provide them to `plot_gene` using the parameters `annot` and `exprs`.
+
+## Evidence plots
+
+Evidence plots are ROC curves for gene set enrichments, produced by the
+`evidencePlot` function from the `tmod` package. 
+
+```{r fig.width=6,fig.height=4}
+plot_evidence(pip, id="LI.M4.2", dbname="tmod", contrast="COVID19_vs_non_COVID19_ID0")
+```
+
+## Disco plots
+
+Disco plots visualize a comparison between two contrasts. Genes which
+change in the same direction in both contrasts are shown in red, genes with
+opposite changes are shown in blue. Color intensity depends on the mapping
+between the disco scores and can be modified by the parameters `lower` and
+`upper`.
+
+```{r fig.width=10,fig.height=5}
+cntr <- get_contrasts(pip)
+g1 <- plot_disco(cntr[[1]], cntr[[2]])
+g2 <- plot_disco(cntr[[1]], cntr[[2]], lower=-5, upper=5)
+plot_grid(g1, g2)
+```
+
+The colors follow the disco statistic, defined as 
+
+$$d = \text{LFC}_1\cdot \text{LFC}_2\cdot(-\log_{10}(p_1) - \log_{10}(p_2))$$
+
+The disco score can be calculated with `disco_score()`.
+
+# Functional analysis
+
+## Gene set enrichments with tmod
+
+The sea-snap pipeline uses by default a number of gene set databases,
+including the original expression modules from the `tmod` package and gene
+sets derived from the MSigDB database. These are stored in the `tmod_dbs`
+object (in the pipeline, step `tmod_dbs`, extension `rds`, contrast `all`),
+returned by the function `get_tmod_dbs()`. 
+
+Since mapping between the identifiers used by the pipeline and the
+databases is a bit tricky, the pipeline exports the mapped identifiers in
+the object returned by the `get_tmod_mapping()` function. Using the `tmod`
+package for enrichment tests in this context would require a fair amount of
+footwork, which is why Rseasnap includes convenience functions for this.
+
+The `test_gsea_tmod()` function requires the pipeline object, a sorted list
+of genes (primary identifiers) and the name of the gene set database to
+use. The sorted list of genes may be derived from the contrasts results
+(i.e., genes sorted by increasing p-value), but there are other options.
+
+For example, one can sort the genes by the decreasing disco score, which
+means that the top of the list will consist of most concordant genes
+between two contrasts (red dots on a disco plot), while the bottom will be
+discordant genes (blue dots).
+
+```{r}
+tmod_dbs <- get_tmod_dbs(pip)
+disco <- disco_score(cntr[[1]], cntr[[2]])
+ord <- order(disco$disco, decreasing=TRUE)
+gene_list <- disco$PrimaryID[ ord ]
+test_gsea_tmod(pip, gene_list, "tmod")
+```
+
+
+# Pipeline browser
+
+## Usage
+
+Pipeline browser is a simple R shiny app which creates a GUI allowing to
+explore the pipeline results. Presently, three modules are available: 
+
+ * a browser for DE analysis results
+ * browser for tmod gene set enrichment analysis results, and
+ * disco plot viewer
+
+To start the browser in an interactive session, type
+
+```{r eval=FALSE}
+pipeline_browser(pip)
+```
+
+## Development
+
+Components of the browser are codes as shiny modules, thus enabling
+independent usage in other shiny apps. For example, a minimal shiny app
+featuring the gene browser (without the profile visualization part!) may look as follows:
+
+```{r eval=FALSE}
+library(shiny)
+cntr  <- get_contrasts(pip)
+annot <- get_annot(pip)
+
+ui <- fluidPage(
+  geneBrowserTableUI("geneT", names(cntr))
+  )
+
+server <- function(input, output, session) {
+  geneBrowserTableServer("geneT", cntr, annot)
+}
+
+shinyApp(ui, server)
+```
+
+
+
+
