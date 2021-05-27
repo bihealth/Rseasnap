@@ -494,10 +494,13 @@ plot_gene <- function(x, id, xCovar, exprs=NULL, covar=NULL, annot=NULL,
 
   if(is.null(annot)) { 
     message("loading annotation")
-    annot <- get_annot(x) }
+    annot <- get_annot(x) 
+  }
+
   if(is.null(covar)) { 
     message("loading covariates")
-    covar <- get_covariates(x) }
+    covar <- get_covariates(x) 
+  }
 
   if(!id %in% annot$PrimaryID) {
     stop(sprintf("PrimaryID %s not found in annotation object", id))

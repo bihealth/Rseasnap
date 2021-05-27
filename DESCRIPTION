@@ -39,5 +39,6 @@ Imports:
     thematic,
     shinyjs
 Suggests: 
-    rmarkdown
+    rmarkdown,
+    S4Vectors
 VignetteBuilder: knitr

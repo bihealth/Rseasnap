@@ -1,3 +1,5 @@
+#' @rdname discoServer
+#' @export
 discoUI <- function(id, cntr_titles) {
 
   if(!length(cntr_titles) > 1) {
@@ -47,7 +49,39 @@ discoUI <- function(id, cntr_titles) {
   return(ret)
 }
 
-discoServer <- function(id, cntr, annot=NULL) {
+#' Shiny Module – disco plots
+#'
+#' Shiny Module – disco plots
+#' @param id identifier of the shiny module (character vector)
+#' @param cntr list of data frames containing the contrast information.
+#'        Data frames must have the columns log2FoldChange and pvalue. Rownames of
+#'        the data frames should be IDs.
+#' @param annot Annotation data frame. The annotation data frame must have
+#'        a column named "PrimaryID" which corresponds to the rownames of the data
+#'        frames in the `cntr` list.
+#' @param selcols which column in the gene table when genes are selected
+#'        from the plot
+#' @param cntr_titles character vector containing the IDs of the contrasts
+#'        (same as `names(cntr)`).
+#' @return Returns a reactive expression returning the ID of the activated gene
+#' @examples
+#' if(interactive()) {
+#'    cntr1 <- data.frame(log2FoldChange=rnorm(5000),
+#'                        pvalue=runif(5000))
+#'    rownames(cntr1) <- paste0("ID", 1:5000)
+#'    cntr2 <- data.frame(log2FoldChange=cntr1$log2FoldChange + 
+#'                                       rnorm(5000),
+#'                        pvalue=runif(5000) * cntr1$pvalue)
+#'    rownames(cntr2) <- paste0("ID", 1:5000)
+#'    cntr <- list("Contrast 1"=cntr1, "Contrast 2"=cntr2)
+#'    shinyApp(ui=fluidPage(discoUI("disco", names(cntr))),
+#'             server=function(input, output, session) {
+#'                discoServer("disco", cntr)
+#'             })
+#' }
+#' @export
+discoServer <- function(id, cntr, annot=NULL,
+    selcols=c("PrimaryID", "ENTREZ", "SYMBOL")) {
 
   moduleServer(id, function(input, output, session) {
     disable("min")

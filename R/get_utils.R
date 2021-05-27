@@ -158,6 +158,7 @@ get_covariates <- function(x, hide=75) {
 
   ds2 <- get_deseq2(x)
   ret <- as.colorDF(as.data.frame(ds2@colData))
+  #ret <- as.data.frame(ds2@colData)
 
   col_type(ret, c("md5", "filename")) <- "hidden"
   max_w <- sapply(ret, function(x) max(nchar(as.character(x))))
