@@ -130,7 +130,7 @@ discoServer <- function(id, cntr, annot=NULL,
     output$discoplot <- renderPlot({
       c1 <- input$contrast1
       c2 <- input$contrast2
-      disco(disco_score(cntr[[c1]], cntr[[c2]]))
+      disco(disco_score(cntr[[c1]], cntr[[c2]], by="PrimaryID"))
 
       if(input$autoscale) {
         g <- plot_disco(cntr[[c1]], cntr[[c2]], disco=disco())

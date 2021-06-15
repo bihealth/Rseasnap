@@ -82,8 +82,6 @@ tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr) {
     message("Launching tmod plot server")
     disable("save")
 
-    cntr <- cntr %>% map(~ .x %>% rownames_to_column("PrimaryID")) 
-
     ## create the evidence plot and display the command line to replicate it
     output$evidencePlot <- renderPlot({
       mod <- req(selmod())

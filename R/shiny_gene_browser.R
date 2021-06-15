@@ -2,7 +2,7 @@
 ## removing unnecessary columns etc.
 .gene_browser_prep_res <- function(cntr, but, annot) {
 
-  cntr   <- cntr %>% map(~ .x %>% rownames_to_column("PrimaryID")) %>% 
+  cntr   <- cntr %>% 
     map(~ { .x %>% mutate('>'= sprintf(but, PrimaryID)) }) %>%
     map(~ { .x %>% select(all_of(setdiff(colnames(.x), c("stat", "lfcSE", "symbol", "entrez")))) }) %>%
     map(~ { .x %>% { merge(annot, ., by="PrimaryID", all.x=TRUE) } %>% relocate(all_of(">"), .before=1) %>% arrange(pvalue)})
@@ -134,45 +134,83 @@ geneBrowserTableServer <- function(id, cntr, annot) {
 
 #' @rdname geneBrowserPlotServer
 #' @export
-geneBrowserPlotUI <- function(id, covar) {
+geneBrowserPlotUI <- function(id, covar, contrasts=FALSE) {
   all_covars         <- covar %>% summary_colorDF() %>% filter(unique > 1) %>% pull(.data$Col)
   default_covar <- .default_covar(covar, all_covars, default="group")
-
-  sidebarLayout(
-    sidebarPanel(
+  col_control <-  column(3, style="padding:20px;",
       fluidRow(downloadButton(NS(id, "save"), "Save plot to PDF", class="bg-success")),
       fluidRow(selectInput(NS(id, "covarName"), "X covariate", all_covars, selected=default_covar, width="100%")),
       fluidRow(selectInput(NS(id, "groupBy"), "Group by", c("N/A", all_covars), selected="N/A", width="100%")),
       fluidRow(selectInput(NS(id, "colorBy"), "Color by", c("N/A", all_covars), selected="N/A", width="100%")),
       fluidRow(selectInput(NS(id, "symbolBy"), "Symbol by", c("N/A", all_covars), selected="N/A", width="100%")),
       fluidRow(textOutput(NS(id, "addInfo"))),
-      fluidRow(verbatimTextOutput(NS(id, "geneData"))),
-      width=3
-    ),
-
-    mainPanel(
-      plotOutput(NS(id, "countsplot")),
-      width=9
+      fluidRow(verbatimTextOutput(NS(id, "geneData")))
     )
-  )
+  if(contrasts) {
+    return(fluidRow(col_control,
+      column(9, style="padding:20px;", tabsetPanel(
+      tabPanel("Plot", fluidRow(br(), plotOutput(NS(id, "countsplot")))),
+      tabPanel("Contrast overview", fluidRow(br(), dataTableOutput(NS(id, "contr_sum"))))
+      ))))
+  } else {
+    return(fluidRow(col_control,
+      column(9, style="padding:20px;", plotOutput(NS(id, "countsplot")))))
+  }
+
 }
 
 #' Shiny Module – gene browser expression profile plot
 #'
 #' Shiny Module – gene browser expression profile plot
-#' @param gene_id primary identifier of the gene to show
+#'
+#' The `gene_id` parameter must be a reactive value, because that is the
+#' whole point of the plotting module: observe changes to the gene ID and
+#' update the plot accordingly.
+#' 
+#' In contrast, other parameters must not be reactive values. This may
+#' change in future to allow for dynamic exchange of data sets.
+#' @param gene_id primary identifier of the gene to show. This must be a
+#'        reactive value
 #' @param exprs expression matrix; row names must correspond to the primary identifiers
-#' @param annot annotation data frame containing column 'PrimaryID'
+#' @param annot (optional) annotation data frame containing column 'PrimaryID'
 #'        corresponding to the rownames of the contrast data frames
 #' @param id identifier (same as the one passed to geneBrowserTableUI)
 #' @param covar data frame with all covariates
+#' @param cntr (optional) list of contrasts
+#' @param symbol_col name of the column in `annot` which contains the gene
+#'        symbols; use NULL if no such column
+#' @param description_col name of the column in `annot` which contains the gene
+#'        title / description; use NULL if no such column
 #' @return does not return anything useful
+#' @examples
+#' if(interactive()) {
+#'    mtx <- matrix(rnorm(40, mean=rep(c(0, 1), each=20)), nrow=1)
+#'    rownames(mtx) <- "MUZG"
+#'    covar <- data.frame(
+#'                        em=rep(LETTERS[1:2], each=20),
+#'                        pstrem=rep(letters[1:20], 2),
+#'                        bzdrem=rnorm(40))
+#'   
+#'    ui  <- fluidPage(geneBrowserPlotUI("gplot", covar))
+#'    serv <- function(input, output, session) {
+#'      gid <- reactiveVal()
+#'      gid("MUZG")
+#'      geneBrowserPlotServer("gplot", gid, covar, mtx)
+#'    }
+#'    shinyApp(ui, serv)
+#' }
 #' @export
-geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot) {
+geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NULL, 
+                                  symbol_col="SYMBOL", description_col="GENENAME") {
   stopifnot(is.reactive(gene_id))
   stopifnot(!is.reactive(covar))
   stopifnot(!is.reactive(exprs))
   stopifnot(!is.reactive(annot))
+  stopifnot(is.null(annot) || is.data.frame(annot))
+  if(!is.null(annot)) {
+    stopifnot(all(c("PrimaryID", symbol_col, description_col) %in% 
+                  colnames(annot)))
+  }
 
   moduleServer(id, function(input, output, session) {
     disable("save")
@@ -199,11 +237,35 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot) {
     # Show a turbo card for a gene
     output$geneData <- renderText({
       req(gene_id())
-      sprintf("PrimaryID: %s\nSymbol: %s\nDescription: %s",
-              gene_id(),
-              annot[match(gene_id(), annot$PrimaryID), "SYMBOL"],
-              annot[match(gene_id(), annot$PrimaryID), "GENENAME"])
+      ret <- sprintf("PrimaryID: %s", gene_id())
+      if(!is.null(annot)) {
+        m <- match(gene_id(), annot$PrimaryID)
+        if(!is.null(symbol_col)) {
+          ret <- paste0(ret,
+                       sprintf("\nSymbol: %s",
+                               annot[m, ][[symbol_col]])) 
+        }
+        if(!is.null(description_col)) {
+          ret <- paste0(ret, 
+                        sprintf("\nDescription: %s",
+                                annot[m, ][[description_col]]))
+        }
+      }
+      return(ret)
     })
+    if(!is.null(cntr)) {
+      output$contr_sum <- DT::renderDataTable({
+        req(gene_id())
+        cn <- names(cntr)
+        res <- imap_dfr(cntr, ~ .x %>% 
+                        filter(PrimaryID == gene_id()) %>% 
+                    mutate(contrast=.y))
+
+        numcol <- map_lgl(res, is.numeric)
+        res %>% datatable(escape=FALSE, selection='none', options=list(pageLength=5)) %>%
+          formatSignif(columns=colnames(res)[numcol], digits=2)
+      })
+    }
 
     ## Additional information - e.g. correlation coefficient if the
     ## covariate is numeric

@@ -14,8 +14,19 @@
 #' @param cntr contrasts list returned by `get_contrasts`
 #' @param tmod_dbs tmod databases returned by `get_tmod_dbs`
 #' @param tmod_res tmod results returned by `get_tmod_res`
+#' @param primary_id name of the column in the annotion data frame
+#'        which corresponds to the primary gene identifier (including the
+#'        row names of the contrasts results in the cntr object)
+#' @examples
+#' if(interactive) {
+#'   example_dir <- system.file("extdata/example_pipeline", package="Rseasnap")
+#'   conf_f      <- file.path(example_dir, "DE_config.yaml")
+#'   pip         <- load_de_pipeline(config_file = conf_f)
+#'   pipeline_browser(pip)
+#' }
 #' @export
-pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs=NULL) {
+pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs=NULL,
+                             primary_id="PrimaryID") {
   theme_set(theme_bw())
 
   message("preparing...")
@@ -29,6 +40,9 @@ pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs
     message(" * Loading contrasts (consider using the cntr option to speed this up)")
     cntr <- get_contrasts(pip)
   }
+
+  cntr <- map(cntr, ~ .x %>% rownames_to_column("PrimaryID"))
+
 
   if(is.null(tmod_res)) {
     message(" * Loading tmod results (consider using the tmod_res option to speed this up)")
@@ -68,7 +82,7 @@ pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs
         tabPanel(h3("Gene browser"),
             fluidRow(verbatimTextOutput("msg")),
             geneBrowserTableUI("geneT", cntr_titles),
-            geneBrowserPlotUI("geneP", covar),
+            geneBrowserPlotUI("geneP", covar, contrasts=TRUE),
             value="gbrowser"
           ),
         tabPanel(h3("tmod browser"),
@@ -86,24 +100,31 @@ pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs
         ),
         useShinyjs()
     )
+
   server <- function(input, output, session) {
+    ## this reactive value holds the id of the selected gene, however the
+    ## selection has been done
+    gene_id <- reactiveVal()
+
     gene_id1 <- geneBrowserTableServer("geneT", cntr, annot)
-    mod_id <- tmodBrowserTableServer("tmodT", pip, tmod_res)
+    mod_id   <- tmodBrowserTableServer("tmodT", pip, tmod_res)
     tmodBrowserPlotServer("tmodP", mod_id, pip, tmod_dbs, tmod_map, cntr)
     gene_id2 <- discoServer("disco", cntr, annot)
 
     pcaServer("pca", pca$x, covar)
 
     ## combine events selecting a gene from gene browser and from disco
-    gene_id <- reactiveVal()
     observeEvent(gene_id1(), { gene_id(gene_id1()) })
     observeEvent(gene_id2(), { 
       updateNavbarPage(session, "navid", "gbrowser")
       gene_id(gene_id2())
     })
 
-    geneBrowserPlotServer("geneP", gene_id, covar, rld, annot)
+    geneBrowserPlotServer("geneP", gene_id, covar=covar, 
+                          exprs=rld, annot=annot, cntr=cntr)
   }
 
   shinyApp(ui, server)
 }
+
+

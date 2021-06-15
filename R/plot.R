@@ -53,6 +53,12 @@ disco_color_scale <- function(x, lower=-100, upper=100, int=255, alpha="66") {
 #' @param alpha transparency
 #' @param disco result of `disco_score`; if provided, it will be used to
 #'        avoid unnecessary computations
+#' @param label_col name of the column in `annot` which should be used for
+#'        labels
+#' @param by column by which the contrast data frames should be merged
+#'       (passed to `merge`). Default: merge by row names
+#' @param primary_id the name which should be assigned to the identifier
+#'        column which results from the merge
 #' @examples
 #' ## Generate example data
 #' c1 <- data.frame(log2FoldChange=rnorm(5000, sd=2))
@@ -67,10 +73,11 @@ disco_color_scale <- function(x, lower=-100, upper=100, int=255, alpha="66") {
 #' @importFrom stats cor
 #' @export
 plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
-  show_top_labels=0, top_labels_both=TRUE, annot=NULL, alpha=.5, disco=NULL) {
+  show_top_labels=0, top_labels_both=TRUE, annot=NULL, alpha=.5, disco=NULL, by=0,
+  primary_id="PrimaryID", label_col="SYMBOL") {
 
   if(is.null(disco)) {
-    cc <- disco_score(contrast1, contrast2)
+    cc <- disco_score(contrast1, contrast2, by=by, primary_id=primary_id)
   } else {
     cc <- disco
   }
@@ -80,12 +87,12 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
 
   if(show_top_labels > 0) {
     cc$label <- ""
-    if(!is.null(annot) && all(c("PrimaryID", "SYMBOL") %in% colnames(annot))) {
-      cc$label <- as.character(annot$SYMBOL)[ match(rownames(cc), annot$PrimaryID) ]
+    if(!is.null(annot) && all(c(primary_id, label_col) %in% colnames(annot))) {
+      cc$label <- as.character(annot[[label_col]])[ match(cc[[primary_id]], annot[[primary_id]]) ]
       sel <- is.na(cc$label)
-      cc$label[sel] <- rownames(cc)[sel]
+      cc$label[sel] <- cc[[primary_id]][sel]
       cc$label[is.na(cc$label)] <- ""
-    } else if(is.null(cc$label <- rownames(cc))) {
+    } else if(is.null(cc$label <- cc[[primary_id]])) {
       cc$label <- ""
     }
     if(top_labels_both) {
@@ -139,12 +146,16 @@ plot_disco <- function(contrast1, contrast2, lower=-100, upper=100,
 #'        IDs (they don't need to be in the same order) and columns `log2FoldChange`
 #'        and `pvalue`.
 #' @param minp minimum p-value
+#' @param by column by which the contrast data frames should be merged
+#'       (passed to `merge`). Default: merge by row names
+#' @param primary_id the name which should be assigned to the identifier
+#'        column which results from the merge
 #' @return a merged data frame containing column "disco.score"
 #' @importFrom methods as
 #' @export
-disco_score <- function(contrast1, contrast2, minp=1e-16) {
+disco_score <- function(contrast1, contrast2, minp=1e-16, by=0, primary_id="PrimaryID") {
 
-  cc <- merge(as(contrast1, "data.frame"), as(contrast2, "data.frame"), by=0)
+  cc <- merge(as(contrast1, "data.frame"), as(contrast2, "data.frame"), by=by)
   colnames(cc)[1] <- "PrimaryID"
   rownames(cc) <- cc[,1]
   cc$disco <- with(cc, log2FoldChange.x * log2FoldChange.y * (-log10(pvalue.x + minp) -log10(pvalue.y  + minp)))
@@ -481,11 +492,14 @@ plot_ly_pca <- function(mtx, covariate_data, threeD=TRUE, cov_default=NULL) {
 #' @param groupBy name of the covariate column by which to group and connect by lines the data points 
 #' @param symbolBy name of the covariate column by which to select point symbols
 #' @param colorBy name of the covariate column by which to color the data
+#' @param primary_id name of the primary ID column which corresponds to the
+#'        `d` (default: PrimaryID)
 #' @return a ggplot2 object
 #' @import ggplot2 
 #' @export
 plot_gene <- function(x, id, xCovar, exprs=NULL, covar=NULL, annot=NULL, 
-                               groupBy = NA, colorBy = NA, symbolBy = NA) {
+                               groupBy = NA, colorBy = NA, symbolBy = NA, 
+                               primary_id="PrimaryID") {
   if(is.null(exprs)) {
     message("loading RLD")
     exprs <- get_object(x, step="DESeq2", extension="rld.blind.rds") 
@@ -502,11 +516,12 @@ plot_gene <- function(x, id, xCovar, exprs=NULL, covar=NULL, annot=NULL,
     covar <- get_covariates(x) 
   }
 
-  if(!id %in% annot$PrimaryID) {
+  if(!id %in% annot[[primary_id]]) {
     stop(sprintf("PrimaryID %s not found in annotation object", id))
   }
 
   g <- plot_gene_generic(id, xCovar, exprs, covar, annot, groupBy=groupBy,
+                    annot_id_col=primary_id,
                     colorBy=colorBy, symbolBy=symbolBy)
   return(g)
 }
