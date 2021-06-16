@@ -150,7 +150,7 @@ Evidence plots are ROC curves for gene set enrichments, produced by the
 `evidencePlot` function from the `tmod` package. 
 
 ```{r fig.width=6,fig.height=4}
-plot_evidence(pip, id="LI.M4.2", dbname="tmod", contrast="COVID19_vs_non_COVID19_ID0")
+plot_evidence(pip, id="LI.M4.2", dbname="tmod", contrast="COVID19_ID0")
 ```
 
 ## Disco plots

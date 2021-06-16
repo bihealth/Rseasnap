@@ -5,25 +5,73 @@
 \alias{geneBrowserPlotServer}
 \title{Shiny Module – gene browser expression profile plot}
 \usage{
-geneBrowserPlotUI(id, covar)
+geneBrowserPlotUI(id, covar, contrasts = FALSE)
 
-geneBrowserPlotServer(id, gene_id, covar, exprs, annot)
+geneBrowserPlotServer(
+  id,
+  gene_id,
+  covar,
+  exprs,
+  annot = NULL,
+  cntr = NULL,
+  symbol_col = "SYMBOL",
+  description_col = "GENENAME"
+)
 }
 \arguments{
 \item{id}{identifier (same as the one passed to geneBrowserTableUI)}
 
 \item{covar}{data frame with all covariates}
 
-\item{gene_id}{primary identifier of the gene to show}
+\item{contrasts}{(logical) whether or not create an additional panel
+next to the plot which can be used to show detailed contrast
+information for a gene}
+
+\item{gene_id}{primary identifier of the gene to show. This must be a
+reactive value}
 
 \item{exprs}{expression matrix; row names must correspond to the primary identifiers}
 
-\item{annot}{annotation data frame containing column 'PrimaryID'
+\item{annot}{(optional) annotation data frame containing column 'PrimaryID'
 corresponding to the rownames of the contrast data frames}
+
+\item{cntr}{(optional) list of contrasts}
+
+\item{symbol_col}{name of the column in \code{annot} which contains the gene
+symbols; use NULL if no such column}
+
+\item{description_col}{name of the column in \code{annot} which contains the gene
+title / description; use NULL if no such column}
 }
 \value{
 does not return anything useful
 }
 \description{
 Shiny Module – gene browser expression profile plot
+}
+\details{
+The \code{gene_id} parameter must be a reactive value, because that is the
+whole point of the plotting module: observe changes to the gene ID and
+update the plot accordingly.
+
+In contrast, other parameters must not be reactive values. This may
+change in future to allow for dynamic exchange of data sets.
+}
+\examples{
+if(interactive()) {
+   mtx <- matrix(rnorm(40, mean=rep(c(0, 1), each=20)), nrow=1)
+   rownames(mtx) <- "MUZG"
+   covar <- data.frame(
+                       em=rep(LETTERS[1:2], each=20),
+                       pstrem=rep(letters[1:20], 2),
+                       bzdrem=rnorm(40))
+  
+   ui  <- fluidPage(geneBrowserPlotUI("gplot", covar))
+   serv <- function(input, output, session) {
+     gid <- reactiveVal()
+     gid("MUZG")
+     geneBrowserPlotServer("gplot", gid, covar, mtx)
+   }
+   shinyApp(ui, serv)
+}
 }

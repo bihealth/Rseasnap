@@ -18,7 +18,7 @@
 #'        which corresponds to the primary gene identifier (including the
 #'        row names of the contrasts results in the cntr object)
 #' @examples
-#' if(interactive) {
+#' if(interactive()) {
 #'   example_dir <- system.file("extdata/example_pipeline", package="Rseasnap")
 #'   conf_f      <- file.path(example_dir, "DE_config.yaml")
 #'   pip         <- load_de_pipeline(config_file = conf_f)
@@ -41,7 +41,7 @@ pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs
     cntr <- get_contrasts(pip)
   }
 
-  cntr <- map(cntr, ~ .x %>% rownames_to_column("PrimaryID"))
+  cntr <- map(cntr, ~ .x %>% rownames_to_column(primary_id))
 
 
   if(is.null(tmod_res)) {

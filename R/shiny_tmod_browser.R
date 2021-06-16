@@ -208,11 +208,11 @@ tmodBrowserTableServer <- function(id, pip, tmod_res) {
 #' @importFrom shiny tableOutput renderTable renderPlot plotOutput 
 #' @importFrom shiny column fluidPage fluidRow mainPanel 
 #' @importFrom shiny actionButton reactiveValues eventReactive
-#' @importFrom shiny sidebarLayout sidebarPanel titlePanel tabPanel navbarPage updateNavbarPage
+#' @importFrom shiny sidebarLayout sidebarPanel titlePanel tabPanel navbarPage updateNavbarPage tabsetPanel
 #' @importFrom shiny selectInput numericInput sliderInput checkboxInput
 #' @importFrom shiny downloadButton downloadHandler observeEvent reactiveVal isolate
 #' @importFrom shiny showNotification removeNotification req numericInput
-#' @importFrom shiny NS reactive is.reactive tagList moduleServer HTML h1 h2 h3 h4
+#' @importFrom shiny NS reactive is.reactive tagList moduleServer HTML h1 h2 h3 h4 br
 #' @importFrom shiny nearPoints hoverOpts brushedPoints
 #' @importFrom shinyjs disable enable useShinyjs 
 #' @importFrom grDevices dev.off pdf

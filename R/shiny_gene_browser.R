@@ -172,6 +172,9 @@ geneBrowserPlotUI <- function(id, covar, contrasts=FALSE) {
 #' @param gene_id primary identifier of the gene to show. This must be a
 #'        reactive value
 #' @param exprs expression matrix; row names must correspond to the primary identifiers
+#' @param contrasts (logical) whether or not create an additional panel
+#'        next to the plot which can be used to show detailed contrast
+#'        information for a gene
 #' @param annot (optional) annotation data frame containing column 'PrimaryID'
 #'        corresponding to the rownames of the contrast data frames
 #' @param id identifier (same as the one passed to geneBrowserTableUI)

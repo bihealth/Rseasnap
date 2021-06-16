@@ -13,7 +13,10 @@ plot_disco(
   top_labels_both = TRUE,
   annot = NULL,
   alpha = 0.5,
-  disco = NULL
+  disco = NULL,
+  by = 0,
+  primary_id = "PrimaryID",
+  label_col = "SYMBOL"
 )
 }
 \arguments{
@@ -36,6 +39,15 @@ frame with columns "PrimaryID" and "SYMBOL"}
 
 \item{disco}{result of \code{disco_score}; if provided, it will be used to
 avoid unnecessary computations}
+
+\item{by}{column by which the contrast data frames should be merged
+(passed to \code{merge}). Default: merge by row names}
+
+\item{primary_id}{the name which should be assigned to the identifier
+column which results from the merge}
+
+\item{label_col}{name of the column in \code{annot} which should be used for
+labels}
 }
 \value{
 a ggplot object (plot)

@@ -14,7 +14,8 @@ plot_gene(
   annot = NULL,
   groupBy = NA,
   colorBy = NA,
-  symbolBy = NA
+  symbolBy = NA,
+  primary_id = "PrimaryID"
 )
 
 plot_gene_generic(
@@ -50,6 +51,9 @@ function). If empty, it will be loaded.}
 \item{colorBy}{name of the covariate column by which to color the data}
 
 \item{symbolBy}{name of the covariate column by which to select point symbols}
+
+\item{primary_id}{name of the primary ID column which corresponds to the
+\code{d} (default: PrimaryID)}
 
 \item{annot_id_col}{name of the column in the annot data frame which corresponds to the rownames of the expression matrix.}
 
