@@ -41,7 +41,7 @@ pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs
     cntr <- get_contrasts(pip)
   }
 
-  cntr <- map(cntr, ~ .x %>% rownames_to_column("PrimaryID"))
+  cntr <- map(cntr, ~ .x %>% rownames_to_column(primary_id))
 
 
   if(is.null(tmod_res)) {
