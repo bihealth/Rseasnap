@@ -231,6 +231,83 @@ for other gene set IDs for the same database and contrast\n\n"))
 
 
 
+#' Create tmod panel plot from pipeline data
+#'
+#' Create tmod panel plot from pipeline data
+#'
+#' This is a wrapper around two tmod functions, tmodPanelPlot and
+#' tmodDecideTests. The panel plots show the results of gene set enrichment
+#' analysis; however, to add color according to whether genes go up or down,
+#' additional information based on differential expression analysis is
+#' required. Specifically, for each gene set, the number of significantly up-
+#' and down-regulated genes must be determined. This is the job of
+#' tmodDecideTests. plot_tmod_panelplot makes it easier in that it takes care
+#' of that automatically based on the contrasts defined in the pipeline.
+#' @param x an object of class seasnap_DE_pipeline
+#' @param res results of tmod gene set enrichment analysis. A list with one
+#'        element per contrast.
+#' @param dbname Name of the tmod database from which the results were generated
+#' @param sel a character vector selecting the gene set IDs to plot (note that
+#'        thresholds still apply)
+#' @param contrasts_obj a list with results of DE analysis (e.g. returned by `get_contrasts`). 
+#'        The names of the elements must be identical to the names of the `res` parameter.
+#' @param annot_obj annotation object returned by `get_annot` (if NULL, it
+#'        will be loaded from the pipeline).
+#' @param tmod_dbs_obj tmod database object returned by `get_tmod_dbs` (if NULL, it
+#'        will be loaded from the pipeline).
+#' @param lfc_column Name of the column in contrasts containing the per gene log2 fold changes.
+#' @param pval_column Name of the column in contrasts containing the per gene p-values.
+#' @param pval_thr p-value threshold for significant genes
+#' @param lfc_thr log2 FC  threshold for significant genes
+#' @param ... any further arguments are passed to tmodPanelPlot
+#' @importFrom tmod tmodDecideTests tmodPanelPlot
+#' @importFrom purrr map_dfc
+## @examples
+##
+#' @export
+plot_tmod_panelplot <- function(x, res, dbname, sel=NULL, contrasts_obj=NULL,
+  annot_obj=NULL, tmod_dbs_obj=NULL,
+  lfc_column="log2FoldChange", pval_column="padj",
+  pval_thr=0.05, lfc_thr=1, ...) {
+
+  if(is.null(contrasts_obj)) {
+    contrasts_obj <- get_contrasts(x)
+  }
+
+  stopifnot(all(names(res) %in% names(contrasts_obj)))
+
+  if(!is.null(sel)) {
+    res <- map(res, ~ .x[ .x[["ID"]] %in% sel, ])
+  }
+
+  if(is.null(annot)) { 
+    message("Consider pre-loading annot to speed up this function")
+    annot <- get_annot(x) 
+  }
+  if(is.null(tmod_dbs_obj)) { 
+    message("Consider pre-loading tmod_dbs_obj to speed up this function")
+    tmod_dbs_obj <- get_tmod_dbs(x) 
+  }
+
+  dbobj <- tmod_dbs_obj[[dbname]][["dbobj"]]
+
+  ## order contrasts by Primary ID
+  contrasts_obj <- map(contrasts_obj, ~ {
+    .x <- .x[ annot[["PrimaryID"]], ]
+  })
+
+  lfc  <- map_dfc(contrasts_obj, ~ .x[[lfc_column]])
+  pval <- map_dfc(contrasts_obj, ~ .x[[pval_column]])
+  pval[is.na(pval)] <- 1
+
+  gl <- tmod_db_map_ids(x, annot[["PrimaryID"]], dbname)
+
+  pie <- tmodDecideTests(gl, lfc=lfc, pval=pval, mset=dbobj, lfc.thr=lfc_thr, pval.thr=pval_thr)
+  stopifnot(all(names(res) %in% names(pie)))
+
+  tmodPanelPlot(res, pie=pie, ...)
+}
+
 
 #' Run tmod gene set enrichment
 #'

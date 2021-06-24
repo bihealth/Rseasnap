@@ -9,7 +9,8 @@ pipeline_browser(
   annot = NULL,
   cntr = NULL,
   tmod_res = NULL,
-  tmod_dbs = NULL
+  tmod_dbs = NULL,
+  primary_id = "PrimaryID"
 )
 }
 \arguments{
@@ -22,6 +23,10 @@ pipeline_browser(
 \item{tmod_res}{tmod results returned by \code{get_tmod_res}}
 
 \item{tmod_dbs}{tmod databases returned by \code{get_tmod_dbs}}
+
+\item{primary_id}{name of the column in the annotion data frame
+which corresponds to the primary gene identifier (including the
+row names of the contrasts results in the cntr object)}
 }
 \description{
 Sea-snap pipeline browser
@@ -31,4 +36,12 @@ Launch a shiny app with gene and tmod results browsers for a pipeline.
 Launching is much faster if the large objects (contrasts, tmod
 databases) do not need to be loaded each time the pipeline browser is
 started.
+}
+\examples{
+if(interactive()) {
+  example_dir <- system.file("extdata/example_pipeline", package="Rseasnap")
+  conf_f      <- file.path(example_dir, "DE_config.yaml")
+  pip         <- load_de_pipeline(config_file = conf_f)
+  pipeline_browser(pip)
+}
 }
