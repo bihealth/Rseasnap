@@ -342,7 +342,7 @@ gene_browser <- function(pip, cntr=NULL, annot=NULL) {
     fluidRow(titlePanel(h1("Gene browser")), class="bg-primary"),
     fluidRow(HTML("<hr>")),
     geneBrowserTableUI("geneTab", cntr_titles),
-    geneBrowserPlotUI("genePlot", covar)
+    geneBrowserPlotUI("genePlot", covar, contrasts=TRUE)
   )
 
   ## prepare the server
