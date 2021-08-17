@@ -1,0 +1,338 @@
+QC:
+  __options__:
+  - countMatrix_heatmap
+  - sample_similarity
+  - samples_pca
+contrasts:
+  __options__:
+  - defaults
+  - contrast_list
+  contrast_list:
+  - ID: COVID19_ID0
+    ORA:
+      fdr_threshold: 0.1
+    cluster_profiler:
+      GO:
+        ontologies:
+        - BP
+        - MF
+        pval: 0.1
+        type: ora
+      KEGG:
+        kegg_organism_code: hsa
+        type: ora
+      MSigDb:
+        categories:
+        - H
+        - C2
+        type: gsea
+      run: yes
+    coef: group_COVID_19_vs_non_COVID_19
+    lfcShrink_parameters:
+      type: none
+    max_p_adj: 0.1
+    ranking_by: log2FoldChange
+    ranking_order: -abs(x)
+    results_parameters:
+      altHypothesis: greaterAbs
+      independentFiltering: yes
+      lfcThreshold: 0
+    title: COVID19
+    tmod: yes
+  - ID: ICU_ID1
+    ORA:
+      fdr_threshold: 0.1
+    cluster_profiler:
+      GO:
+        ontologies:
+        - BP
+        - MF
+        pval: 0.1
+        type: ora
+      KEGG:
+        kegg_organism_code: hsa
+        type: ora
+      MSigDb:
+        categories:
+        - H
+        - C2
+        type: gsea
+      run: yes
+    coef: icu_yes_vs_no
+    lfcShrink_parameters:
+      type: none
+    max_p_adj: 0.1
+    ranking_by: log2FoldChange
+    ranking_order: -abs(x)
+    results_parameters:
+      altHypothesis: greaterAbs
+      independentFiltering: yes
+      lfcThreshold: 0
+    title: ICU
+    tmod: yes
+  defaults:
+    ORA:
+      fdr_threshold: 0.1
+    cluster_profiler:
+      GO:
+        ontologies:
+        - BP
+        - MF
+        pval: 0.1
+        type: ora
+      KEGG:
+        kegg_organism_code: hsa
+        type: ora
+      MSigDb:
+        categories:
+        - H
+        - C2
+        type: gsea
+      run: yes
+    lfcShrink_parameters:
+      type: none
+    max_p_adj: 0.1
+    ranking_by: log2FoldChange
+    ranking_order: -abs(x)
+    results_parameters:
+      altHypothesis: greaterAbs
+      independentFiltering: yes
+      lfcThreshold: 0
+    tmod: yes
+dodr:
+  comparisons: {}
+  method: all
+  period: 24
+experiment:
+  __options__:
+  - covariate_file
+  - design_formula
+  - columns
+  columns:
+    group:
+    - non_COVID_19
+    - COVID_19
+    icu:
+    - 'no'
+    - 'yes'
+  covariate_file:
+    salmon: covariate_file.txt
+    star: covariate_file.txt
+  design_formula: ~ group * icu
+export:
+  blueprint:
+    command: |
+      imkdir -p $(dirname {dest} )
+      irsync -a -K {src} i:{dest}
+    file: SODAR_export_DE_blueprint.txt
+  differential_expression:
+  - files:
+      extension: rds
+      step: contrast
+  functional_analysis_csv:
+  - compress: zip
+    files:
+      extension: csv
+      step: cluster_profiler
+  functional_analysis_rds:
+  - files:
+      extension: go.rds
+      step: goseq
+  - files:
+      extension: kegg.rds
+      step: goseq
+  - files:
+      extension: rds
+      step: cluster_profiler
+  path_pattern:
+  - __SODAR__/{contrast}/{GENOME}/%Y_%m_%d/{files:differential_expression}/out/{step}.{contrast}.{extension}
+  - __SODAR__/{contrast}/{GENOME}/%Y_%m_%d/{files:functional_analysis:rds}/{step}/out/{step}.{contrast}.{extension}
+  - __SODAR__/{contrast}/{GENOME}/%Y_%m_%d/{files:functional_analysis:csv}/{step}/out/{step}.{contrast}.zip
+filters:
+  __options__:
+  - low_counts
+  - experiment_blacklist
+  - experiment_whitelist
+  experiment_blacklist: {}
+  experiment_whitelist: {}
+  gene_list:
+    file: ~
+    type: ENSEMBL
+  low_counts: 10
+  min_count_n: 3
+  min_counts: 5
+normalization:
+  DESeq2_parameters:
+    min_mu: 0
+  __options__: DESeq2_parameters
+  normalized_expression: vst
+organism:
+  R:
+    annotations: org.Hs.eg.db
+  __options__:
+  - name
+  - genus
+  - taxon
+  - files
+  - star_index
+  - salmon_index
+  - R
+  abbreviation: hs
+  bwa_index: ~
+  files:
+    bed: /fast/projects/cubit/18.12/static_data/annotation/GENCODE/25/GRCh38/gencode.v25.chr_scaff.annotation.bed
+    genome: /fast/projects/cubit/18.12/static_data/reference/GRCh38/p7.chr_scaff/GRCh38.p7.genome.chr_scaff.fa
+    gtf: /fast/projects/cubit/18.12/static_data/annotation/GENCODE/25/GRCh38/gencode.v25.chr_scaff.annotation.gtf
+    seqc_gtf: /fast/projects/cubit/18.12/static_data/annotation/GENCODE/25/GRCh38/gencode.v25.chr_scaff.annotation.no_genes.protein_coding.rRNA.gtf
+    transcriptome: ''
+  genome_size: '2913022398'
+  genome_version: GRCh38
+  genus: Homo sapiens
+  name: human
+  salmon_index: ~
+  star_index: ~
+  taxon: 9606
+organism_defaults: Homo_sapiens.yaml
+pipeline_param:
+  __options__:
+  - out_path_pattern
+  - log_path_pattern
+  - in_path_pattern
+  - report_snippets
+  - input_choice
+  in_path_pattern: mapping/{step}/{sample}/{mate}/out/{step}.{sample}.{mate}.{extension}
+  input_choice:
+    mapping:
+    - import_gene_counts
+    - import_sf
+  log_path_pattern: DE/{contrast}/{step}/report/{step}.{contrast}.{extension}
+  out_path_pattern: DE/{contrast}/{step}/out/{step}.{contrast}.{extension}
+  report_snippets: ''
+  test_config: yes
+rain:
+  filter:
+    frac_above_threshold:
+      frac: 0.8
+      threshold: 5
+    min_fold_change: 1.5
+  peak_boarder: c(0.3, 0.7)
+  period: 24
+report:
+  __options__:
+  - defaults
+  - report_snippets
+  - snippet_parameters
+  defaults:
+    NormalisationQC:
+    - PCA_plot.Rmd
+    - HierarchicalClustering_plot.Rmd
+    - SampleSimilarity_plot.Rmd
+    - NormExprDens_plot.Rmd
+    - DESeq2Norm_plot.Rmd
+    - CoxOutlier_plot.Rmd
+    cluster_profiler:
+    - Dot_plot.Rmd
+    - EnrichmentMap_plot.Rmd
+    - Upset_plot.Rmd
+    contrast:
+    - __list__: __contrasts__
+    contrast_list:
+    - Init_code.Rmd
+    - MA_plot.Rmd
+    - Result_table.Rmd
+    - Goseq_GO_table.Rmd
+    - tmod_contrast.Rmd
+    - cluster_profiler: __defaults__
+    time_series:
+    - __list__: __timeseries__
+    time_series_comparison:
+    - __list__: __timeseries_comp__
+    time_series_comparison_list: DODR_table.Rmd
+    time_series_list: Rain_table.Rmd
+  report_snippets:
+  - Covariate_table.Rmd
+  - NormalisationQC:
+    - PCA_plot.Rmd
+    - HierarchicalClustering_plot.Rmd
+    - SampleSimilarity_plot.Rmd
+    - NormExprDens_plot.Rmd
+    - DESeq2Norm_plot.Rmd
+    - CoxOutlier_plot.Rmd
+  - Volcano.Rmd
+  - contrast: __defaults__
+  - Functional:
+    - tmod.Rmd
+    - cluster_profiler_summary.Rmd
+  snippet_parameters:
+    Export_files:
+      dir: export_files
+    Normalisation_QC:
+      annotation_columns: group
+      n_most_varying: 500
+    contrast:
+      filter_goseq:
+        qval: 0.1
+      filter_results:
+        qval: 0.1
+    dodr:
+      filter_results:
+        qval: 0.2
+    rain:
+      filter_results:
+        qval: 0.2
+      plot:
+        show_num: 6
+    tmod:
+      fig_auc_min: 0.55
+      fig_n_max: 35
+      fig_n_min: 10
+      fig_qval_max: 0.01
+      n_evid: 5
+    tmod_contrast:
+      res_auc_thr: 0.65
+      res_pval_thr: 0.01
+time_series: {}
+tmod:
+  databases:
+  - annotationDBI: org.Hs.eg.db
+    description: Gene sets derived from clustering expression profiles from human
+      blood collected for various immune conditions. These gene sets are included
+      in the tmod package by default. Check tmod documentation for further information.
+    file: tmod
+    name: tmod
+    primaryID: SYMBOL
+    taxonID: 9606
+    title: Co-expression gene sets (tmod)
+  - description: Reactome gene sets the Molecular Signatures DB (https://www.gsea-msigdb.org/gsea/msigdb/).
+    file: msigdb
+    name: msigdb_reactome
+    primaryID: ENTREZID
+    subset: Category=C2,Subcategory=CP:REACTOME
+    title: Reactome gene sets (MSigDB)
+  - description: Hallmark gene sets the Molecular Signatures DB (https://www.gsea-msigdb.org/gsea/msigdb/).
+    file: msigdb
+    name: msigdb_hallmark
+    primaryID: ENTREZID
+    subset: Category=H
+    title: Hallmark gene sets (MSigDB)
+  - description: KEGG pathways from the Molecular Signatures DB (https://www.gsea-msigdb.org/gsea/msigdb/).
+    file: msigdb
+    name: msigdb_kegg
+    primaryID: ENTREZID
+    subset: Category=C2,Subcategory=CP:KEGG
+    title: KEGG pathways (MSigDB)
+  - description: MIR targets from the Molecular Signatures DB (https://www.gsea-msigdb.org/gsea/msigdb/).
+    file: msigdb
+    name: msigdb_mir
+    primaryID: ENTREZID
+    subset: Category=C3,Subcategory=MIR:MIRDB
+    title: MIR targets (MSigDB)
+  - description: GO Biological Process definitions from the Molecular Signatures DB
+      (https://www.gsea-msigdb.org/gsea/msigdb/).
+    file: msigdb
+    name: msigdb_go_bp
+    primaryID: ENTREZID
+    subset: Category=C5,Subcategory=BP
+    title: GO Biological Process (MSigDB)
+  sort_by: pval
+  tmod_db_path: ./

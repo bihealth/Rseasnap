@@ -1,3 +1,12 @@
+infoUI <- function(config) {
+
+
+
+
+}
+
+
+
 
 
 
@@ -73,35 +82,44 @@ pipeline_browser <- function(pip, annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs
   thematic_shiny(font="auto")
 
   ui <- navbarPage(
-      "Sea-snap pipeline browser",
       id = "navid",
+      imageOutput("pipicon", width="80px", height="80px"),
       theme = bs_theme(primary = "#47336F", secondary = "#C6B3EB", 
                               font_scale = NULL, 
                               `enable-shadows` = TRUE, 
                               bootswatch = "united"),
-        tabPanel(h3("Gene browser"),
+        tabPanel(h4("Gene browser"),
             fluidRow(verbatimTextOutput("msg")),
             geneBrowserTableUI("geneT", cntr_titles),
             geneBrowserPlotUI("geneP", covar, contrasts=TRUE),
             value="gbrowser"
           ),
-        tabPanel(h3("tmod browser"),
+        tabPanel(h4("tmod browser"),
             tmodBrowserTableUI("tmodT", cntr_titles, dbs, sorting),
             tmodBrowserPlotUI("tmodP"),
             value="tbrowser"
         ),
-        tabPanel(h3("disco"),
+        tabPanel(h4("disco"),
             discoUI("disco", cntr_titles),
             value="disco"
         ),
-        tabPanel(h3("PCA"),
+        tabPanel(h4("PCA"),
             pcaUI("pca", covar, colnames(pca$x)),
             value="pca"
         ),
+        tabPanel(h4("Pipeline info"),
+            infoUI(config),
+            value="info"),
         useShinyjs()
     )
 
   server <- function(input, output, session) {
+
+    output$pipicon <- renderImage({
+      list(src=system.file("icons/piper.png", package="Rseasnap"), 
+           width=80,height=80, alt="[ Piper ]")},
+      deleteFile=FALSE
+    )
     ## this reactive value holds the id of the selected gene, however the
     ## selection has been done
     gene_id <- reactiveVal()
