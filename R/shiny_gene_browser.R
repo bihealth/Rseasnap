@@ -63,15 +63,17 @@
 #' @rdname geneBrowserTableServer
 #' @export
 geneBrowserTableUI <- function(id, cntr_titles) {
-  but <- actionButton("foo", label=" > ", class = "btn-primary btn-sm")
+  but <- actionButton("foo", label=" \U25B6 ", class = "btn-primary btn-sm")
   sidebarLayout(
     sidebarPanel(
         fluidRow(selectInput(NS(id, "contrast"), label = "Contrast", choices = cntr_titles, width="100%")),
         fluidRow(
-                 numericInput(NS(id, "f_lfc"),    label="Filter by abs(LFC)", min=0, value=0.5, step=.1, width="30%"),
-                 numericInput(NS(id, "f_pval"),    label="Filter by FDR", min=0, max=1.0, value=0.05, step=.1, width="30%"),
-                 selectInput(NS(id, "f_dir"), label="Direction", choices=c(Any="an", Up="up", "Down"="dw"), width="40%")
-                 ),
+                 column(6,
+                 numericInput(NS(id, "f_lfc"),    label="Filter by abs(LFC)", min=0, value=0.5, step=.1, width="100%"),
+                 numericInput(NS(id, "f_pval"),    label="Filter by FDR", min=0, max=1.0, value=0.05, step=.1, width="100%")), column(6,
+                 selectInput(NS(id, "f_dir"), label="Direction", choices=c(Any="an", Up="up", "Down"="dw"), 
+                             width="100%")
+                 )),
       tagList(
         HTML(paste("Click on the", but, "buttons to view an expression profile<br/>"))
       ),
@@ -100,7 +102,7 @@ geneBrowserTableServer <- function(id, cntr, annot) {
 
     gene_id <- reactiveVal("")
 
-    but <- actionButton("go_%s", label=" > ", 
+    but <- actionButton("go_%s", label=" \U25B6 ", 
                          onclick=sprintf('Shiny.onInputChange(\"%s-select_button\",  this.id)', id),  
                          class = "btn-primary btn-sm")
     cntr <- .gene_browser_prep_res(cntr, as.character(but), annot)
@@ -137,24 +139,29 @@ geneBrowserTableServer <- function(id, cntr, annot) {
 geneBrowserPlotUI <- function(id, covar, contrasts=FALSE) {
   all_covars         <- covar %>% summary_colorDF() %>% filter(unique > 1) %>% pull(.data$Col)
   default_covar <- .default_covar(covar, all_covars, default="group")
-  col_control <-  column(3, style="padding:20px;",
+  col_control <-  sidebarPanel(
       fluidRow(downloadButton(NS(id, "save"), "Save plot to PDF", class="bg-success")),
+      column(width=5, 
       fluidRow(selectInput(NS(id, "covarName"), "X covariate", all_covars, selected=default_covar, width="100%")),
       fluidRow(selectInput(NS(id, "groupBy"), "Group by", c("N/A", all_covars), selected="N/A", width="100%")),
+      ),
+      column(width=5,
       fluidRow(selectInput(NS(id, "colorBy"), "Color by", c("N/A", all_covars), selected="N/A", width="100%")),
       fluidRow(selectInput(NS(id, "symbolBy"), "Symbol by", c("N/A", all_covars), selected="N/A", width="100%")),
+      offset=1),
       fluidRow(textOutput(NS(id, "addInfo"))),
       fluidRow(verbatimTextOutput(NS(id, "geneData")))
     )
   if(contrasts) {
-    return(fluidRow(col_control,
+    return(sidebarLayout(col_control,
+      mainPanel(
       column(9, style="padding:20px;", tabsetPanel(
       tabPanel("Plot", fluidRow(br(), plotOutput(NS(id, "countsplot")))),
       tabPanel("Contrast overview", fluidRow(br(), dataTableOutput(NS(id, "contr_sum"))))
-      ))))
+      )))))
   } else {
-    return(fluidRow(col_control,
-      column(9, style="padding:20px;", plotOutput(NS(id, "countsplot")))))
+    return(col_control,
+      mainPanel(plotOutput(NS(id, "countsplot"))))
   }
 
 }

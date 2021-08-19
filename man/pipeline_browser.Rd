@@ -6,6 +6,7 @@
 \usage{
 pipeline_browser(
   pip,
+  title = "Pipeline browser",
   annot = NULL,
   cntr = NULL,
   tmod_res = NULL,
@@ -15,6 +16,8 @@ pipeline_browser(
 }
 \arguments{
 \item{pip}{pipeline returned by \code{load_de_pipeline}}
+
+\item{title}{Name of the pipeline to display}
 
 \item{annot}{annotation returned by \code{get_annot}}
 

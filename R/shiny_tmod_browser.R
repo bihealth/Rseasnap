@@ -52,12 +52,12 @@ tmodBrowserPlotUI <- function(id) {
       sidebarPanel(
         fluidRow(downloadButton(NS(id, "save"), "Save plot", class="bg-success")),
         fluidRow(verbatimTextOutput(NS(id, "modinfo"))),
-        width=3
+        width=5
       ),
       mainPanel(
         fluidRow(verbatimTextOutput(NS(id, "cmdline"))),
         fluidRow(plotOutput(NS(id, "evidencePlot"))),
-        width=9
+        width=7
       )
     )
 }
@@ -127,7 +127,7 @@ tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr) {
 #' @export
 tmodBrowserTableUI <- function(id, cntr_titles, dbs, sorting) {
 
-  but <- actionButton("uselessID", label=" > ", class = "btn-primary btn-sm")
+  but <- actionButton("uselessID", label=" \U25B6 ", class = "btn-primary btn-sm")
 
   ui <- sidebarLayout(
           sidebarPanel(
@@ -167,7 +167,7 @@ tmodBrowserTableServer <- function(id, pip, tmod_res) {
 
   moduleServer(id, function(input, output, session) {
     message("Launching tmod browser server")
-    but <- actionButton("go_%s-!-%s-!-%s-!-%s", label=" > ", 
+    but <- actionButton("go_%s-!-%s-!-%s-!-%s", label=" \U25B6 ", 
                         onclick=sprintf('Shiny.onInputChange(\"%s-select_button\",  this.id)', id),  
                         class = "btn-primary btn-sm")
 
@@ -212,7 +212,7 @@ tmodBrowserTableServer <- function(id, pip, tmod_res) {
 #' @importFrom shiny selectInput numericInput sliderInput checkboxInput
 #' @importFrom shiny downloadButton downloadHandler observeEvent reactiveVal isolate
 #' @importFrom shiny showNotification removeNotification req numericInput
-#' @importFrom shiny NS reactive is.reactive tagList moduleServer HTML h1 h2 h3 h4 br
+#' @importFrom shiny NS reactive is.reactive tagList moduleServer HTML h1 h2 h3 h4 br strong p
 #' @importFrom shiny nearPoints hoverOpts brushedPoints
 #' @importFrom shinyjs disable enable useShinyjs 
 #' @importFrom grDevices dev.off pdf
