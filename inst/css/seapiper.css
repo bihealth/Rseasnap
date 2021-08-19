@@ -1,0 +1,75 @@
+.logo { background-color: #47336F !important; }
+.navbar { background-color: #7A62A3 !important; } 
+.box.box-solid.box-primary>.box-header {
+      color:#fff;
+      background:#666666
+}
+
+
+.content-wrapper, .main-footer, .right-side {
+  margin-left:90px;
+}
+
+.main-header .navbar-custom-menu, .main-header .navbar-right {
+  padding-top:10px;
+}
+.main-header .logo {
+  height:62px
+}
+
+.main-header .navbar {
+  min-height:62px;
+  font-size:20px;
+}
+
+.left-side, .main-sidebar {
+  width:90px;
+  padding-top:62px;
+}
+
+.main-sidebar .user-panel, .sidebar-menu, .sidebar-menu>li.header {
+  white-space:normal;
+  text-align:center;
+}
+
+.sidebar-menu>li>a {
+  padding-left:10px;
+  padding-right:10px;
+}
+
+.skin-purple .sidebar-menu>li.active>a, .skin-purple .sidebar-menu>li:hover>a {
+  background-color:#47336F;  
+}
+
+.skin-purple .sidebar a {
+  color:#98979e;
+}
+
+.sidebar-menu>li>a>.fa, .sidebar-menu>li>a>.glyphicon, .sidebar-menu>li>a>.ion {
+  width:50px;
+  font-size:24px;
+}
+
+.skin-purple .left-side, .skin-purple .main-sidebar, .skin-purple .wrapper {
+   background-color: #47336F
+}
+
+.btn-primary {
+  font-size: xx-small;
+  border-color: #47336F;
+  background-color: #47336F;
+  color: #FFF;
+}
+
+.btn-primary.hover,.btn-primary:active,.btn-primary:hover{
+  background-color:#7A62A3 
+}
+
+.box.box-solid.box-primary{
+      border-bottom-color:#666666;
+      border-left-color:#666666;
+      border-right-color:#666666;
+      border-top-color:#666666;
+}
+
+
