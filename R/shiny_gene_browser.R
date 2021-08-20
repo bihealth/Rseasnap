@@ -1,25 +1,36 @@
 ## prepare contrasts for the gene browser, adding action button, sorting,
 ## removing unnecessary columns etc.
-.gene_browser_prep_res <- function(cntr, but, annot) {
+.gene_browser_prep_res <- function(cntr, but, annot, annot_linkout) {
 
   cntr   <- cntr %>% 
     map(~ { .x %>% mutate('>'= sprintf(but, PrimaryID)) }) %>%
     map(~ { .x %>% select(all_of(setdiff(colnames(.x), c("stat", "lfcSE", "symbol", "entrez")))) }) %>%
     map(~ { .x %>% { merge(annot, ., by="PrimaryID", all.x=TRUE) } %>% relocate(all_of(">"), .before=1) %>% arrange(pvalue)})
 
+  if(!is.null(annot_linkout)) {
+    cntr <- map(cntr, ~ {
+                         for(n in names(annot_linkout)) {
+                           fmt <- sprintf('<a href="%s" target="_blank">%%s</a>', annot_linkout[[n]])
+                           .x[[n]] <- ifelse(is.na(.x[[n]]) | .x[[n]] == "", .x[[n]], sprintf(fmt, .x[[n]], .x[[n]]))
+                         }
+                         .x
+    })
+  }
+
   return(cntr)
 }
 
 ## Wrapper around plot_gene, mainly to replace "N/A" with NA
 .gene_browser_plot <- function(covar, id, covarName, rld, annot, 
-                               groupBy = "N/A", colorBy = "N/A", symbolBy = "N/A") {
+                               groupBy = "N/A", colorBy = "N/A", symbolBy = "N/A", trellisBy="N/A") {
   .args <- list(id=id, xCovar=covarName, covar=covar, exprs=rld, groupBy=groupBy, annot=annot,
-                colorBy=colorBy, symbolBy=symbolBy)
+                colorBy=colorBy, symbolBy=symbolBy, trellisBy=trellisBy)
   ## weirdly, the line below is really, really slow
   #.args <- map(.args, ~ if(!is.na(.x) && .x == "N/A") { NA } else { .x })
   if(.args$groupBy == "N/A") .args$groupBy <- NA
   if(.args$colorBy == "N/A") .args$colorBy <- NA
   if(.args$symbolBy == "N/A") .args$symbolBy <- NA
+  if(.args$trellisBy == "N/A") .args$trellisBy <- NA
   #plot_gene(pip, id, xCovar=covarName, covar=covar, rld=rld, groupBy=groupBy, colorBy=colorBy, symbolBy=symbolBy)
   do.call(plot_gene_generic, .args)
 }
@@ -90,22 +101,43 @@ geneBrowserTableUI <- function(id, cntr_titles) {
 #' Shiny Module – gene browser table selection
 #'
 #' Shiny Module – gene browser table selection
+#'
+#' The linkout feature (parameter `annot_linkout`) allows to define how the
+#' different columns from the annotation data frame are represented as
+#' linkouts to external data bases. 
+#'
+#' The parameter `annot_linkout` is a named list. Names must correspond to
+#' columns from the annotation data frame. The elements of the list are
+#' character strings containing URLs with the `%s` placeholder. For
+#' example, if the column `ENSEMBL` contains ENSEMBL identifiers, you can
+#' link out by specifying 
+#'
+#' ```
+#' annot_linkout=list(ENSEMBL="https://www.ensembl.org/id/%s")
+#' ```
 #' @param cntr a list of data frames containing the DE analysis results
 #' @param annot annotation data frame containing column 'PrimaryID'
 #'        corresponding to the rownames of the contrast data frames
 #' @param id identifier for the namespace of the module
 #' @param cntr_titles named character vector for contrast choices
+#' @param annot_linkout a list; see Details. 
 #' @return reactive value containing the gene ID
 #' @export
-geneBrowserTableServer <- function(id, cntr, annot) {
+geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL) {
+
+  if(!is.null(annot_linkout)) {
+    stopifnot(all(names(annot_linkout) %in% names(annot)))
+  }
+
   moduleServer(id, function(input, output, session) {
+
 
     gene_id <- reactiveVal("")
 
     but <- actionButton("go_%s", label=" \U25B6 ", 
                          onclick=sprintf('Shiny.onInputChange(\"%s-select_button\",  this.id)', id),  
                          class = "btn-primary btn-sm")
-    cntr <- .gene_browser_prep_res(cntr, as.character(but), annot)
+    cntr <- .gene_browser_prep_res(cntr, as.character(but), annot, annot_linkout)
 
     observeEvent(input$select_button, {
       gene_id(gsub("^go_", "", input$select_button))
@@ -125,7 +157,8 @@ geneBrowserTableServer <- function(id, cntr, annot) {
       }
 
       res %>% filter(.data[["padj"]] < input$f_pval & abs(.data[["log2FoldChange"]]) > input$f_lfc) %>%
-      datatable(escape=FALSE, selection='none', options=list(pageLength=5)) %>%
+      datatable(escape=FALSE, selection='none', extensions="Buttons",
+                options=list(pageLength=5, dom="Bfrtip", scrollX=TRUE, buttons=c("copy", "csv", "excel"))) %>%
         formatSignif(columns=intersect(colnames(cntr[[ input$contrast ]]), 
                                        c("baseMean", "log2FoldChange", "pvalue", "padj")), digits=2)
     })
@@ -138,17 +171,20 @@ geneBrowserTableServer <- function(id, cntr, annot) {
 #' @export
 geneBrowserPlotUI <- function(id, covar, contrasts=FALSE) {
   all_covars         <- covar %>% summary_colorDF() %>% filter(unique > 1) %>% pull(.data$Col)
+  non_unique         <- covar %>% summary_colorDF() %>% filter(unique < nrow(covar)) %>% pull(.data$Col)
   default_covar <- .default_covar(covar, all_covars, default="group")
   col_control <-  sidebarPanel(
       fluidRow(downloadButton(NS(id, "save"), "Save plot to PDF", class="bg-success")),
+      fluidRow(
       column(width=5, 
-      fluidRow(selectInput(NS(id, "covarName"), "X covariate", all_covars, selected=default_covar, width="100%")),
-      fluidRow(selectInput(NS(id, "groupBy"), "Group by", c("N/A", all_covars), selected="N/A", width="100%")),
+      fluidRow(selectInput(NS(id, "covarName"), "X covariate", non_unique, selected=default_covar, width="100%")),
+      fluidRow(selectInput(NS(id, "colorBy"), "Color by", c("N/A", non_unique), selected="N/A", width="100%")),
+      fluidRow(selectInput(NS(id, "symbolBy"), "Symbol by", c("N/A", non_unique), selected="N/A", width="100%")),
       ),
       column(width=5,
-      fluidRow(selectInput(NS(id, "colorBy"), "Color by", c("N/A", all_covars), selected="N/A", width="100%")),
-      fluidRow(selectInput(NS(id, "symbolBy"), "Symbol by", c("N/A", all_covars), selected="N/A", width="100%")),
-      offset=1),
+      fluidRow(selectInput(NS(id, "groupBy"), "Link data points by", c("N/A", non_unique), selected="N/A", width="100%")),
+      fluidRow(selectInput(NS(id, "trellisBy"), "Trellis by", c("N/A", non_unique), selected="N/A", width="100%")),
+      offset=1)),
       fluidRow(textOutput(NS(id, "addInfo"))),
       fluidRow(verbatimTextOutput(NS(id, "geneData")))
     )
@@ -229,8 +265,8 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
     output$save <- downloadHandler(
       filename = function() {
         req(gene_id())
-        ret <- sprintf("expression_profile_%s_covarX_%s_colorBy_%s_groupBy_%s_symbolBy_%s.pdf",
-                       gene_id(), input$covarName, input$colorBy, input$groupBy, input$symbolBy)
+        ret <- sprintf("expression_profile_%s_covarX_%s_colorBy_%s_groupBy_%s_symbolBy_%s_trellisBy_%s.pdf",
+                       gene_id(), input$covarName, input$colorBy, input$groupBy, input$symbolBy, input$trellisBy)
         ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
         return(ret)
       },
@@ -238,7 +274,7 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
         req(gene_id())
         pdf(file=file, width=8, height=5)
         g <- .gene_browser_plot(covar, gene_id(), input$covarName, exprs, annot, 
-                           input$groupBy, input$colorBy, input$symbolBy)
+                           input$groupBy, input$colorBy, input$symbolBy, input$trellisBy)
         print(g)
         dev.off()
       }
@@ -289,7 +325,8 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
       req(gene_id())
       enable("save")
       .gene_browser_plot(covar, gene_id(), input$covarName, exprs, annot, 
-                         input$groupBy, input$colorBy, input$symbolBy)
+                         input$groupBy, input$colorBy, input$symbolBy, input$trellisBy) +
+                                    theme(text=element_text(size=14))
     })
   })
 }

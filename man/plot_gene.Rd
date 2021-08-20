@@ -15,6 +15,7 @@ plot_gene(
   groupBy = NA,
   colorBy = NA,
   symbolBy = NA,
+  trellisBy = NA,
   primary_id = "PrimaryID"
 )
 
@@ -28,7 +29,8 @@ plot_gene_generic(
   annot_symb_col = "SYMBOL",
   groupBy = NA,
   colorBy = NA,
-  symbolBy = NA
+  symbolBy = NA,
+  trellisBy = NA
 )
 }
 \arguments{
@@ -51,6 +53,8 @@ function). If empty, it will be loaded.}
 \item{colorBy}{name of the covariate column by which to color the data}
 
 \item{symbolBy}{name of the covariate column by which to select point symbols}
+
+\item{trellisBy}{name of the covariate column for use in a trellis (multipanel) plot}
 
 \item{primary_id}{name of the primary ID column which corresponds to the
 \code{d} (default: PrimaryID)}

@@ -89,6 +89,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
     annot  <- get_annot(pip)
   }
 
+
   # prepare the contrast tables
   if(is.null(cntr)) {
     message(" * Loading contrasts (consider using the cntr option to speed this up)")
@@ -106,6 +107,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
   tmod_map <- get_tmod_mapping(pip)
   config   <- get_config(pip)
   covar    <- get_covariates(pip)
+  annot_linkout <- .prep_annot_linkout(annot, config)
 
   if(is.null(tmod_dbs)) {
     message(" * Loading tmod_dbs (consider using the tmod_rdbses option to speed this up)")
@@ -120,9 +122,9 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
 
   pca <- prcomp(t(rld), scale.=TRUE)
   
-  cntr_titles <- map_chr(config$contrasts$contrast_list, `[[`, "ID")
+  cntr_titles        <- map_chr(config$contrasts$contrast_list, `[[`, "ID")
   names(cntr_titles) <- map_chr(config$contrasts$contrast_list, `[[`, "title")
-  cntr_titles <- cntr_titles[ cntr_titles %in% names(cntr) ]
+  cntr_titles        <- cntr_titles[ cntr_titles %in% names(cntr) ]
 
   thematic_shiny(font="auto")
 
@@ -188,21 +190,21 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
     )
   )
 
-  ui <- dashboardPage(header, sidebar, body, skin="purple")
+  ui <- dashboardPage(header, sidebar, body, skin="purple", title=title)
 
   server <- function(input, output, session) {
 
     ## pipeline browser specific functions
 
-    output$project_overview <- renderTable({ project_overview_table(config, title) })
+    output$project_overview   <- renderTable({ project_overview_table(config, title) })
     output$contrasts_overview <- renderTable({ contrasts_overview_table(config) })
-    output$covariates <- renderDataTable({ covariate_table(covar) })
+    output$covariates         <- renderDataTable({ covariate_table(covar) })
 
     ## this reactive value holds the id of the selected gene, however the
     ## selection has been done
     gene_id <- reactiveVal()
 
-    gene_id1 <- geneBrowserTableServer("geneT", cntr, annot)
+    gene_id1 <- geneBrowserTableServer("geneT", cntr, annot, annot_linkout=annot_linkout)
     mod_id   <- tmodBrowserTableServer("tmodT", pip, tmod_res)
     tmodBrowserPlotServer("tmodP", mod_id, pip, tmod_dbs, tmod_map, cntr)
     gene_id2 <- discoServer("disco", cntr, annot)
@@ -228,12 +230,16 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
 project_overview_table <- function(config, title) {
   
   tmp1 <- data.frame(
-                 c("Organism", "Taxon ID", "Formula", "Contrasts", "Tmod dbs"),
+                 c("Organism", "Taxon ID", "Formula", "Contrasts", "Tmod dbs", 
+                   "Low count filter (absolute)", "Low count filter (samples)"),
                  c(config$organism$name, 
                    config$organism$taxon,
                    config$experiment$design_formula,
                    length(config$contrasts$contrast_list),
-                   paste(map_chr(config$tmod$databases, `[[`, "title"), collapse=", ")
+                   paste(map_chr(config$tmod$databases, `[[`, "title"), collapse=", "),
+                   sprintf("Removed genes with < %d total counts", config$filter$low_counts),
+                   sprintf("Kept genes with at least %d counts in at least %d samples",
+                           config$filter$min_counts, config$filter$min_count_n)
                    ))
   colnames(tmp1) <- c("Title:", title)
   tmp1
@@ -259,3 +265,38 @@ covariate_table <- function(covar) {
 
 }
 
+
+.prep_annot_linkout <- function(annot, config) {
+
+  ret <- list()
+  cn <- colnames(annot)
+
+  if("ENSEMBL" %in% cn) {
+    ret$ENSEMBL <- "https://www.ensembl.org/id/%s/"
+  }
+  if("ENSEMBLID" %in% cn) {
+    ret$ENSEMBLID <- "https://www.ensembl.org/id/%s/"
+  }
+              
+  if(config$organism$name == "human" & "SYMBOL" %in% cn) {
+    ret$SYMBOL <- "https://www.genecards.org/cgi-bin/carddisp.pl?gene=%s"
+  }
+
+  if("ENTREZ" %in% cn) {
+    ret$ENTREZ <- "https://www.ncbi.nlm.nih.gov/gene/?term=%s"
+  }
+
+  if("ENTREZID" %in% cn) {
+    ret$ENTREZID <- "https://www.ncbi.nlm.nih.gov/gene/?term=%s"
+  }
+
+  if("REFSEQID" %in% cn) {
+    ret$REFSEQID <- "https://www.ncbi.nlm.nih.gov/gene/?term=%s"
+  }
+
+  if("REFSEQ" %in% cn) {
+    ret$REFSEQ <- "https://www.ncbi.nlm.nih.gov/gene/?term=%s"
+  }
+
+  ret
+}

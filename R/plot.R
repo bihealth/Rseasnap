@@ -492,13 +492,15 @@ plot_ly_pca <- function(mtx, covariate_data, threeD=TRUE, cov_default=NULL) {
 #' @param groupBy name of the covariate column by which to group and connect by lines the data points 
 #' @param symbolBy name of the covariate column by which to select point symbols
 #' @param colorBy name of the covariate column by which to color the data
+#' @param trellisBy name of the covariate column for use in a trellis (multipanel) plot
 #' @param primary_id name of the primary ID column which corresponds to the
 #'        `d` (default: PrimaryID)
 #' @return a ggplot2 object
 #' @import ggplot2 
 #' @export
 plot_gene <- function(x, id, xCovar, exprs=NULL, covar=NULL, annot=NULL, 
-                               groupBy = NA, colorBy = NA, symbolBy = NA, 
+                               groupBy = NA, colorBy = NA, symbolBy = NA,
+                               trellisBy=NA,
                                primary_id="PrimaryID") {
   if(is.null(exprs)) {
     message("loading RLD")
@@ -521,7 +523,7 @@ plot_gene <- function(x, id, xCovar, exprs=NULL, covar=NULL, annot=NULL,
   }
 
   g <- plot_gene_generic(id, xCovar, exprs, covar, annot, groupBy=groupBy,
-                    annot_id_col=primary_id,
+                    annot_id_col=primary_id, trellisBy=trellisBy,
                     colorBy=colorBy, symbolBy=symbolBy)
   return(g)
 }
@@ -532,7 +534,8 @@ plot_gene <- function(x, id, xCovar, exprs=NULL, covar=NULL, annot=NULL,
 plot_gene_generic <- function(id, xCovar, exprs, covar, annot=NULL, 
                                annot_id_col="PrimaryID",
                                annot_symb_col="SYMBOL",
-                               groupBy = NA, colorBy = NA, symbolBy = NA) {
+                               groupBy = NA, colorBy = NA, symbolBy = NA,
+                               trellisBy=NA) {
 
   df <- data.frame(covar, Expression=exprs[id, ])
   if(!is.null(annot)) {
@@ -567,6 +570,10 @@ plot_gene_generic <- function(id, xCovar, exprs, covar, annot=NULL,
 
   if(!is.na(groupBy)) {
     g <- g + geom_line()
+  }
+
+  if(!is.na(trellisBy)) {
+    g <- g + facet_wrap(trellisBy)
   }
 
 

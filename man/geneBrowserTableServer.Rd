@@ -7,7 +7,7 @@
 \usage{
 geneBrowserTableUI(id, cntr_titles)
 
-geneBrowserTableServer(id, cntr, annot)
+geneBrowserTableServer(id, cntr, annot, annot_linkout = NULL)
 }
 \arguments{
 \item{id}{identifier for the namespace of the module}
@@ -18,10 +18,24 @@ geneBrowserTableServer(id, cntr, annot)
 
 \item{annot}{annotation data frame containing column 'PrimaryID'
 corresponding to the rownames of the contrast data frames}
+
+\item{annot_linkout}{a list; see Details.}
 }
 \value{
 reactive value containing the gene ID
 }
 \description{
 Shiny Module – gene browser table selection
+}
+\details{
+The linkout feature (parameter \code{annot_linkout}) allows to define how the
+different columns from the annotation data frame are represented as
+linkouts to external data bases.
+
+The parameter \code{annot_linkout} is a named list. Names must correspond to
+columns from the annotation data frame. The elements of the list are
+character strings containing URLs with the \verb{\%s} placeholder. For
+example, if the column \code{ENSEMBL} contains ENSEMBL identifiers, you can
+link out by specifying\preformatted{annot_linkout=list(ENSEMBL="https://www.ensembl.org/id/\%s")
+}
 }
