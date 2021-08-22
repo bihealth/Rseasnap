@@ -137,6 +137,7 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL) {
     but <- actionButton("go_%s", label=" \U25B6 ", 
                          onclick=sprintf('Shiny.onInputChange(\"%s-select_button\",  this.id)', id),  
                          class = "btn-primary btn-sm")
+
     cntr <- .gene_browser_prep_res(cntr, as.character(but), annot, annot_linkout)
 
     observeEvent(input$select_button, {
@@ -184,7 +185,9 @@ geneBrowserPlotUI <- function(id, covar, contrasts=FALSE) {
       column(width=5,
       fluidRow(selectInput(NS(id, "groupBy"), "Link data points by", c("N/A", non_unique), selected="N/A", width="100%")),
       fluidRow(selectInput(NS(id, "trellisBy"), "Trellis by", c("N/A", non_unique), selected="N/A", width="100%")),
-      offset=1)),
+      fluidRow(numericInput(NS(id, "fontSize"),    label="Font size", min=6, value=14, step=1, width="50%")),
+      offset=1)
+      ),
       fluidRow(textOutput(NS(id, "addInfo"))),
       fluidRow(verbatimTextOutput(NS(id, "geneData")))
     )
@@ -326,7 +329,7 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
       enable("save")
       .gene_browser_plot(covar, gene_id(), input$covarName, exprs, annot, 
                          input$groupBy, input$colorBy, input$symbolBy, input$trellisBy) +
-                                    theme(text=element_text(size=14))
+                                    theme(text=element_text(size=input$fontSize))
     })
   })
 }

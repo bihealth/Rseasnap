@@ -206,7 +206,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
 
     gene_id1 <- geneBrowserTableServer("geneT", cntr, annot, annot_linkout=annot_linkout)
     mod_id   <- tmodBrowserTableServer("tmodT", pip, tmod_res)
-    tmodBrowserPlotServer("tmodP", mod_id, pip, tmod_dbs, tmod_map, cntr)
+    gene_id3 <- tmodBrowserPlotServer("tmodP", mod_id, pip, tmod_dbs, tmod_map, cntr)
     gene_id2 <- discoServer("disco", cntr, annot)
 
     pcaServer("pca", pca$x, covar)
@@ -216,6 +216,10 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
     observeEvent(gene_id2(), { 
       updateTabItems(session, "navid", "gene_browser")
       gene_id(gene_id2())
+    })
+    observeEvent(gene_id3(), { 
+      updateTabItems(session, "navid", "gene_browser")
+      gene_id(gene_id3())
     })
 
     geneBrowserPlotServer("geneP", gene_id, covar=covar, 

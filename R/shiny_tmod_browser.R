@@ -25,6 +25,27 @@
 }
 
 
+## create a datatable with the genes from a gene set
+.tmod_browser_gene_table <- function(pip, but, id, db_name, cntr_name, sort_name, tmod_dbs, cntr, tmod_map) {
+
+  message("Generating gene table")
+
+  db <- tmod_dbs[[db_name]][["dbobj"]]
+  genes <- db[["MODULES2GENES"]][[id]]
+  genes_pid <- tmod_rev_db_map_ids(pip, ids=genes, dbname=db_name, tmod_dbs_mapping_obj=tmod_map)
+
+  ret <- cntr[[cntr_name]] %>% filter(PrimaryID %in% genes_pid)
+  ret <- ret %>% mutate('>' = sprintf(but, PrimaryID)) %>% relocate(all_of(">"), .before=1)
+  message(sprintf("Gene table with %d genes", nrow(ret)))
+
+  datatable(ret, escape=FALSE, selection='none',
+                options=list(pageLength=5, dom="Bfrtip", scrollX=TRUE, buttons=c("copy", "csv", "excel"))) %>%
+        formatSignif(columns=intersect(colnames(ret),
+                                       c("baseMean", "log2FoldChange", "pvalue", "padj")), digits=2)
+  
+}
+
+
 ## given a module, contrast, sorting prepare a module info tab contents,
 ## including which genes are significant in the given contrast
 .tmod_browser_mod_info <- function(pip, id, db_name, cntr_name, sort_name, tmod_dbs, cntr, tmod_map) {
@@ -56,7 +77,11 @@ tmodBrowserPlotUI <- function(id) {
       ),
       mainPanel(
         fluidRow(verbatimTextOutput(NS(id, "cmdline"))),
-        fluidRow(plotOutput(NS(id, "evidencePlot"))),
+        fluidRow(
+                 tabsetPanel(
+                             tabPanel("Plot", plotOutput(NS(id, "evidencePlot"))),
+                             tabPanel("Genes", dataTableOutput(NS(id, "moduleGenes")))
+                 )),
         width=7
       )
     )
@@ -69,17 +94,32 @@ tmodBrowserPlotUI <- function(id) {
 #' Shiny Module – tmod browser evidence plots
 #'
 #' Shiny Module – gene browser evidence plots
-#' @param selmod identifier of the gene set to plot
+#' @param selmod a reactive
+#' value (e.g. returned by tmodBrowserTableServer) and a list containing
+#' the module id, tmod dataset id, contrast id and sorting type
 #' @param pip pipeline object returned by `load_de_pipeline`
 #' @param tmod_dbs tmod gene set databases returned by `get_tmod_dbs()`
 #' @param tmod_map tmod gene set ID mapping returned by `get_tmod_mapping()`
 #' @param id identifier (same as the one passed to geneBrowserTableUI)
 #' @param cntr list of contrast results returned by `get_contrasts()`
-#' @return does not return anything useful
+#' @param annot data frame containing gene annotation 
+#' @return returns a reactive value with a selected gene identifier
 #' @export
-tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr) {
+tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr, annot=NULL) {
   moduleServer(id, function(input, output, session) {
     message("Launching tmod plot server")
+
+    ## gene_id is necessary to call the gene plots in another tab
+    gene_id <- reactiveVal("")
+
+    gene.but <- actionButton("go_%s", label=" \U25B6 ", 
+                        onclick=sprintf('Shiny.onInputChange(\"%s-gene_select_button\",  this.id)', id),  
+                        class = "btn-primary btn-sm")
+
+    observeEvent(input$gene_select_button, {
+      gene_id(gsub("^go_", "", input$gene_select_button))
+    })
+
     disable("save")
 
     ## create the evidence plot and display the command line to replicate it
@@ -102,6 +142,15 @@ tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr) {
       return(ret)
     })
 
+    output$moduleGenes <- renderDataTable({
+      mod <- req(selmod())
+      .tmod_browser_gene_table(pip, as.character(gene.but),
+                                    mod$id, mod$db, mod$cntr, mod$cntr, 
+                                    tmod_dbs, cntr, tmod_map)
+    })
+    
+
+
     ## save the plot as PDF
     output$save <- downloadHandler(
       filename = function() {
@@ -119,6 +168,7 @@ tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr) {
         dev.off()
       }
     )
+    gene_id
   })
 }
 
@@ -165,8 +215,10 @@ tmodBrowserTableUI <- function(id, cntr_titles, dbs, sorting) {
 #' @export
 tmodBrowserTableServer <- function(id, pip, tmod_res) {
 
+
   moduleServer(id, function(input, output, session) {
     message("Launching tmod browser server")
+
     but <- actionButton("go_%s-!-%s-!-%s-!-%s", label=" \U25B6 ", 
                         onclick=sprintf('Shiny.onInputChange(\"%s-select_button\",  this.id)', id),  
                         class = "btn-primary btn-sm")
@@ -181,13 +233,15 @@ tmodBrowserTableServer <- function(id, pip, tmod_res) {
                                        c("AUC", "cerno", "P.Value", "adj.P.Val")), digits=2)
     })
 
-    selmod <- reactiveValues()
 
+    ## this is the reactive expression returned by this module, known in
+    ## tmodBrowserPlotServer as "selmod()"
     reactive({
       req(input$select_button)
       tmp <- unlist(strsplit(gsub("^go_", "", input$select_button), "-!-"))
       list(id=tmp[1], cntr=tmp[2], db=tmp[3], sort=tmp[4])
     })
+
   })
 }
 
