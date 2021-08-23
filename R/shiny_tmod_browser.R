@@ -1,11 +1,6 @@
 ## Construct the results table to display. Specifically, add action button
 ## for launching the plot.
-.tmod_browser_prepare_res <- function(pip, but, tmod_res=NULL) {
-  if(is.null(tmod_res)) {
-    message(" * Reading tmod results (consider using it as an argument)...")
-    tmod_res <- get_tmod_res(pip)
-  }
-
+.tmod_browser_prepare_res <- function(but, tmod_res) {
   # prepare the tmod res
   tmod_res <- tmod_res %>% imap(~ {
     .cntr <- .y
@@ -210,10 +205,9 @@ tmodBrowserTableUI <- function(id, cntr_titles, dbs, sorting) {
 #' @param dbs character vector with database names
 #' @param sorting character vector with sorting options available
 #' @param id identifier for the namespace of the module
-#' @param pip pipeline object returned by `load_de_pipeline`
 #' @return reactive value producing a list containing the module id, contrast id, db name and sort type.
 #' @export
-tmodBrowserTableServer <- function(id, pip, tmod_res) {
+tmodBrowserTableServer <- function(id, tmod_res) {
 
 
   moduleServer(id, function(input, output, session) {
@@ -223,7 +217,7 @@ tmodBrowserTableServer <- function(id, pip, tmod_res) {
                         onclick=sprintf('Shiny.onInputChange(\"%s-select_button\",  this.id)', id),  
                         class = "btn-primary btn-sm")
 
-    tmod_res <- .tmod_browser_prepare_res(pip, as.character(but), tmod_res)
+    tmod_res <- .tmod_browser_prepare_res(as.character(but), tmod_res)
 
     output$tmodResTab <- renderDataTable({
       res <- tmod_res[[input$contrast]][[input$db]][[input$sort]] %>%
@@ -290,7 +284,7 @@ tmod_browser <- function(pip, tmod_dbs=NULL, tmod_res=NULL, annot=NULL) {
 
   if(is.null(tmod_res)) {
     message(" * Loading tmod results (consider using the tmod_res option to speed this up)")
-    annot  <- get_tmod_res(pip)
+    tmod_res  <- get_tmod_res(pip)
   }
 
   tmod_map <- get_tmod_mapping(pip)
@@ -321,7 +315,7 @@ tmod_browser <- function(pip, tmod_dbs=NULL, tmod_res=NULL, annot=NULL) {
     tmodBrowserPlotUI("tmodPlot"))
     
   server <- function(input, output, session) {
-    selmod <- tmodBrowserTableServer("tmod", pip, tmod_res)
+    selmod <- tmodBrowserTableServer("tmod", tmod_res)
     tmodBrowserPlotServer("tmodPlot", selmod, pip, tmod_dbs, tmod_map, cntr)
   }
 

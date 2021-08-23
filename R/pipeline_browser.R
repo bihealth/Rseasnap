@@ -205,7 +205,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
     gene_id <- reactiveVal()
 
     gene_id1 <- geneBrowserTableServer("geneT", cntr, annot, annot_linkout=annot_linkout)
-    mod_id   <- tmodBrowserTableServer("tmodT", pip, tmod_res)
+    mod_id   <- tmodBrowserTableServer("tmodT", tmod_res)
     gene_id3 <- tmodBrowserPlotServer("tmodP", mod_id, pip, tmod_dbs, tmod_map, cntr)
     gene_id2 <- discoServer("disco", cntr, annot)
 
