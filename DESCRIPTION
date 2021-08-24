@@ -38,7 +38,8 @@ Imports:
     bslib,
     thematic,
     shinydashboard,
-    shinyjs
+    shinyjs,
+    shinyBS
 Suggests: 
     rmarkdown,
     S4Vectors

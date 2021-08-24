@@ -3,24 +3,45 @@
 #' @export
 tmodPanelPlotUI <- function(id, dbs, sorting) {
 
+  ttip <- list(
+
+    gene_pval=paste("Determines which genes are considered significant. Significant genes show as colored",
+                    "fragments on the plot."),
+    filter_auc=paste("Filter the gene sets by setting a minimal AUC threshold on the maximum AUC",
+                     "in any of the contrasts. In other words, remove rows in which no test achieves at",
+                     "least the AUC threshold."),
+    filter_pval=paste("Filter the gene sets by setting a maximum p-value threshold on the minimum p value",
+                     "in any of the contrasts. In other words, remove rows in which no test achieves ",
+                     "the p-value threshold.")
+
+    )
+
     sidebarLayout(
       sidebarPanel(
         fluidRow(
         column(
-           fluidRow(selectInput(NS(id, "db"),        label="Database", choices=dbs,         width="100%")),
-           fluidRow(selectInput(NS(id, "sort"),      label="Sorting",  choices=sorting,     width="100%")),
+           fluidRow(selectInput(NS(id, "db"),        label="Database", choices=dbs,         width="100%"),
+                    bsTooltip(NS(id, "db"), "Gene set database to be shown")),
+           fluidRow(selectInput(NS(id, "sort"),      label="Sorting",  choices=sorting,     width="100%"),
+                    bsTooltip(NS(id, "sort"), "Sorting order for the enrichment")),
            fluidRow(numericInput(NS(id, "gene_pval"), label="P-value significance threshold for genes", 
-                                 value = 0.05, min=0, step=.01, width="100%")),
+                                 value = 0.05, min=0, step=.01, width="100%"),
+                    bsTooltip(NS(id, "gene_pval"), ttip$gene_pval)),
            fluidRow(numericInput(NS(id, "gene_lfc"), label="L2FC significance threshold for genes", 
-                                 value = 0.5, min=0, step=.1, width="100%")),
+                                 value = 0.5, min=0, step=.1, width="100%"),
+                    bsTooltip(NS(id, "gene_lfc"), ttip$gene_pval)),
            width=5),
         column(
            fluidRow(numericInput(NS(id, "font_size"), label="Relative font size", value = 1, 
-                                 min=.1, step=.1, width="100%")),
+                                 min=.1, step=.1, width="100%"),
+                    bsTooltip(NS(id, "font_size"), "Change the font size of plot labels")),
            fluidRow(numericInput(NS(id, "filter_auc"),  label="Filter by AUC (per row)",  value=0.5,
-                                 min=.1, max=1, step=.05, width="100%")),
-           fluidRow(numericInput(NS(id, "filter_pval"),  label="Filter by log10(p-value) (per row)",  
-                                 value=0, min=-15, max=0, step=1, width="100%")),
+                                 min=.1, max=1, step=.05, width="100%"),
+                    bsTooltip(NS(id, "filter_auc"), ttip$filter_auc)),
+           fluidRow(numericInput(NS(id, "filter_pval"),  label="Filter by p-value (per row)",  
+                                 value=0.05, min=0, max=1, step=0.01, width="100%"),
+                    bsTooltip(NS(id, "filter_pval"), ttip$filter_auc)),
+           fluidRow(downloadButton(NS(id, "save"), "Save plot to PDF", class="bg-success")),
            width=5, offset=1)),
         width=3),
       mainPanel(
@@ -58,11 +79,32 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
 #' @param tmod_res list of tmod gene set enrichment analysis
 #' results. See Details.
 #' @param tmod_dbs list of 
+#' @importFrom shinyBS bsTooltip
 #' @export
 tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NULL) {
 
 	moduleServer(id, function(input, output, session) {
     message("Launching tmod panelplot server")
+    disable("save")
+
+    ## Save figure as a PDF
+    output$save <- downloadHandler(
+      filename = function() {
+        req(res())
+        ret <- sprintf("tmod_panel_plot_%s_%s.pdf",
+                       input$db, input$sort)
+        ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
+        return(ret)
+      },
+      content = function(file) {
+        req(res())
+        pdf(file=file, width=10, height=12)
+        .evidence_plot(res(), pie=pie(), text.cex=input$font_size,
+                     filter.rows.auc=input$filter_auc,
+                     filter.rows.pval=input$filter_pval)
+        dev.off()
+      }
+    )
 
 
     res <- reactive({
@@ -74,18 +116,17 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
       .make_pie(res(), cntr, tmod_dbs[[input$db]][["dbobj"]], input$db, tmod_map,
                      gene_pval=input$gene_pval,
                      gene_lfc=input$gene_lfc,
-                     text.cex=input$font_size,
-                     filter.rows.auc=input$filter_auc,
-                     filter.rows.pval=10^(input$filter_pval))
+                     text.cex=input$font_size)
     })
 
                               
 
     output$panelPlot <- renderPlot({
+      enable("save")
 
       .evidence_plot(res(), pie=pie(), text.cex=input$font_size,
                      filter.rows.auc=input$filter_auc,
-                     filter.rows.pval=10^(input$filter_pval))
+                     filter.rows.pval=input$filter_pval)
 
 
     }, width=800,height=800)
