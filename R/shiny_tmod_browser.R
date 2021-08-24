@@ -29,8 +29,8 @@
   genes <- db[["MODULES2GENES"]][[id]]
   genes_pid <- tmod_rev_db_map_ids(pip, ids=genes, dbname=db_name, tmod_dbs_mapping_obj=tmod_map)
 
-  ret <- cntr[[cntr_name]] %>% filter(PrimaryID %in% genes_pid)
-  ret <- ret %>% mutate('>' = sprintf(but, PrimaryID)) %>% relocate(all_of(">"), .before=1)
+  ret <- cntr[[cntr_name]] %>% filter(.data[["PrimaryID"]] %in% genes_pid)
+  ret <- ret %>% mutate('>' = sprintf(but, .data[["PrimaryID"]])) %>% relocate(all_of(">"), .before=1)
   message(sprintf("Gene table with %d genes", nrow(ret)))
 
   datatable(ret, escape=FALSE, selection='none',

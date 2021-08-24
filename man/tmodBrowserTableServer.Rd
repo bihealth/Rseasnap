@@ -7,7 +7,7 @@
 \usage{
 tmodBrowserTableUI(id, cntr_titles, dbs, sorting)
 
-tmodBrowserTableServer(id, pip, tmod_res)
+tmodBrowserTableServer(id, tmod_res)
 }
 \arguments{
 \item{id}{identifier for the namespace of the module}
@@ -17,8 +17,6 @@ tmodBrowserTableServer(id, pip, tmod_res)
 \item{dbs}{character vector with database names}
 
 \item{sorting}{character vector with sorting options available}
-
-\item{pip}{pipeline object returned by \code{load_de_pipeline}}
 
 \item{tmod_res}{results of tmod analysis, returned by \code{get_tmod_res}}
 }

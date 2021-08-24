@@ -7,12 +7,14 @@
 \usage{
 tmodBrowserPlotUI(id)
 
-tmodBrowserPlotServer(id, selmod, pip, tmod_dbs, tmod_map, cntr)
+tmodBrowserPlotServer(id, selmod, pip, tmod_dbs, tmod_map, cntr, annot = NULL)
 }
 \arguments{
 \item{id}{identifier (same as the one passed to geneBrowserTableUI)}
 
-\item{selmod}{identifier of the gene set to plot}
+\item{selmod}{a reactive
+value (e.g. returned by tmodBrowserTableServer) and a list containing
+the module id, tmod dataset id, contrast id and sorting type}
 
 \item{pip}{pipeline object returned by \code{load_de_pipeline}}
 
@@ -21,9 +23,11 @@ tmodBrowserPlotServer(id, selmod, pip, tmod_dbs, tmod_map, cntr)
 \item{tmod_map}{tmod gene set ID mapping returned by \code{get_tmod_mapping()}}
 
 \item{cntr}{list of contrast results returned by \code{get_contrasts()}}
+
+\item{annot}{data frame containing gene annotation}
 }
 \value{
-does not return anything useful
+returns a reactive value with a selected gene identifier
 }
 \description{
 Shiny Module – gene browser evidence plots

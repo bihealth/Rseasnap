@@ -144,6 +144,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
          menuItem("Gene browser",  tabName = "gene_browser", icon = icon("dna")),
          menuItem("Tmod browser",  tabName = "tmod_browser", icon = icon("project-diagram")),
          menuItem("Disco plots",   tabName = "disco", icon = icon("chart-line")),
+         menuItem("Panel plots",   tabName = "panel_plot", icon = icon("grip-vertical")),
          menuItem("PCA",           tabName = "pca", icon = icon("cube")),
          menuItem("Pipeline Info", tabName = "pip_info", icon = icon("info-circle")),
          menuItem("Help",          tabName = "help", icon = icon("question-circle"))
@@ -177,6 +178,9 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
          box(title="Discordance / concordance plots", width=12, status="primary",
          height="800px", solidHeader=TRUE, discoUI("disco", cntr_titles)),
          ),
+      tabItem("panel_plot",
+         box(title="Panel plot", width=12, status="primary",
+             solidHeader=TRUE, tmodPanelPlotUI("panelP", dbs, sorting))),
       tabItem("pca",
          box(title="Principal Component Analysis", width=12, status="primary",
          solidHeader=TRUE, pcaUI("pca", covar, colnames(pca$x))),
@@ -224,6 +228,8 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
 
     geneBrowserPlotServer("geneP", gene_id, covar=covar, 
                           exprs=rld, annot=annot, cntr=cntr)
+    tmodPanelPlotServer("panelP", cntr=cntr, tmod_res=tmod_res,
+                        tmod_dbs=tmod_dbs, tmod_map=tmod_map, annot=annot)
   }
 
   shinyApp(ui, server)
