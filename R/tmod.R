@@ -180,8 +180,8 @@ plot_evidence <- function(x, id, dbname, contrast, sort="pval", contrast_obj=NUL
     p <- contrast_obj$padj
     l <- contrast_obj$log2FoldChange
     colors <- ifelse(l < 0, 
-      ifelse(p < .05, 'blue', '#660000'),
-      ifelse(p < .05, 'red', '#000066'))
+      ifelse(p < .05, 'blue', '#000066'),
+      ifelse(p < .05, 'red', '#660000'))
     names(colors) <- gl
   }
 
