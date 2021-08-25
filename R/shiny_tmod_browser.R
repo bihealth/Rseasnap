@@ -19,18 +19,35 @@
   return(tmod_res)
 }
 
+.tmod_rev_db_map_ids <- function(ids, dbname, tmod_dbs_mapping_obj) {
+
+  mp_id <- tmod_dbs_mapping_obj$dbs[dbname]
+  mapping <- tmod_dbs_mapping_obj$maps[[mp_id]]
+
+  ret <- names(mapping)[ match(ids, mapping) ]
+  
+  if(all(is.na(ret))) {
+    warning(glue("No IDs were found in the mapping... are you sure you are using the {dbname} IDs?\nCheck the annotation data frame (see `get_annot()`)"))
+  }
+
+  names(ret) <- ids
+
+  return(ret)
+}
+
 
 ## create a datatable with the genes from a gene set
-.tmod_browser_gene_table <- function(pip, but, id, db_name, cntr_name, sort_name, tmod_dbs, cntr, tmod_map) {
+.tmod_browser_gene_table <- function(but, id, db_name, cntr_name, sort_name, tmod_dbs, cntr, tmod_map) {
 
   message("Generating gene table")
 
   db <- tmod_dbs[[db_name]][["dbobj"]]
   genes <- db[["MODULES2GENES"]][[id]]
-  genes_pid <- tmod_rev_db_map_ids(pip, ids=genes, dbname=db_name, tmod_dbs_mapping_obj=tmod_map)
+  genes_pid <- .tmod_rev_db_map_ids(ids=genes, dbname=db_name, tmod_dbs_mapping_obj=tmod_map)
 
   ret <- cntr[[cntr_name]] %>% filter(.data[["PrimaryID"]] %in% genes_pid)
-  ret <- ret %>% mutate('>' = sprintf(but, .data[["PrimaryID"]])) %>% relocate(all_of(">"), .before=1)
+  ret <- ret %>% mutate('>' = sprintf(but, .data[["PrimaryID"]])) %>% relocate(all_of(">"), .before=1) %>%
+    arrange(.data[["pvalue"]])
   message(sprintf("Gene table with %d genes", nrow(ret)))
 
   datatable(ret, escape=FALSE, selection='none',
@@ -40,10 +57,66 @@
   
 }
 
+.plot_evidence <- function(mod_id, cntr_id, db_id, sort_id, cntr, tmod_dbs,
+                           tmod_gl=NULL, tmod_map=NULL, annot=NULL) {
+
+  mset <- tmod_dbs[[db_id]][["dbobj"]]
+  cntr <- cntr[[ cntr_id ]]
+
+  if(!all(c("pvalue", "log2FoldChange", "padj") %in% colnames(cntr))) {
+    stop("Parameter `cntr` must have columns log2FoldChange, pvalue and padj")
+  }
+
+  if(!"PrimaryID" %in% colnames(cntr)) {
+    cntr[["PrimaryID"]] <- rownames(cntr)
+  }
+
+  if(is.null(tmod_gl)) {
+    ## create an ad hoc list
+    cntr <- cntr[ order(cntr$pvalue), ]
+    gl <- tmod_map$maps[[ tmod_map$dbs[[ db_id ]] ]][ cntr[["PrimaryID"]] ]
+  } else {
+    gl <- tmod_gl[[cntr_id]][[db_id]][[sort_id]]
+  }
+
+  symbols <- names(gl)
+
+  if("SYMBOL" %in% colnames(annot)) {
+    symbols <- annot[["SYMBOL"]][ match(symbols, annot[["PrimaryID"]]) ]
+  }
+
+  names(symbols) <- names(gl)
+
+  ## We need to figure out what genes are in the gene set to select them as
+  ## labels
+
+  genes <- getModuleMembers(mod_id, mset)[[mod_id]]
+  if(is.null(genes)) {
+    stop(sprintf("Gene set %s not found in db %s", mod_id, db_id))
+  }
+
+  sel                <- gl %in% genes
+  gene.labels        <- symbols[sel]
+  names(gene.labels) <- gl[sel]
+  
+  ## now for some color
+  # make sure that cntr is in the same order as gl
+  cntr <- cntr[ match(names(gl), cntr[["PrimaryID"]]), ]
+
+  p <- cntr$padj
+  l <- cntr$log2FoldChange
+
+  colors <- ifelse(l < 0, 
+      ifelse(p < .05, 'blue', '#000066'),
+      ifelse(p < .05, 'red', '#660000'))
+  names(colors) <- gl
+
+  evidencePlot(gl, m=mod_id, mset=mset, gene.colors=colors, gene.labels=gene.labels)
+}
 
 ## given a module, contrast, sorting prepare a module info tab contents,
 ## including which genes are significant in the given contrast
-.tmod_browser_mod_info <- function(pip, id, db_name, cntr_name, sort_name, tmod_dbs, cntr, tmod_map) {
+.tmod_browser_mod_info <- function(id, db_name, cntr_name, sort_name, tmod_dbs, cntr, tmod_map) {
   db <- tmod_dbs[[db_name]][["dbobj"]]
   ret <- sprintf("Module ID: %s\nDescription: %s\nContrast: %s\nDatabase: %s\nSorting: %s",
           id,
@@ -52,12 +125,6 @@
           db_name, 
           sort_name)
 
-  genes <- db[["MODULES2GENES"]][[id]]
-  genes_pid <- tmod_rev_db_map_ids(pip, ids=genes, dbname=db_name, tmod_dbs_mapping_obj=tmod_map)
-  genes_sign <- genes_pid %in% (cntr[[cntr_name]] %>% filter(.data$padj < 0.05) %>% pull(.data$PrimaryID))
-  ret <- paste0(ret, "\nSignificant genes:\n",     paste(genes[genes_sign],  collapse=","), "\n")
-  ret <- paste0(ret, "\nNon-significant genes:\n", paste(genes[!genes_sign], collapse=","), "\n")
-  return(ret)
 }
 
 
@@ -74,7 +141,7 @@ tmodBrowserPlotUI <- function(id) {
         fluidRow(verbatimTextOutput(NS(id, "cmdline"))),
         fluidRow(
                  tabsetPanel(
-                             tabPanel("Plot", plotOutput(NS(id, "evidencePlot"))),
+                             tabPanel("Plot", plotOutput(NS(id, "evidencePlot"), height="100%")),
                              tabPanel("Genes", dataTableOutput(NS(id, "moduleGenes")))
                  )),
         width=7
@@ -89,18 +156,57 @@ tmodBrowserPlotUI <- function(id) {
 #' Shiny Module – tmod browser evidence plots
 #'
 #' Shiny Module – gene browser evidence plots
+#'
+#' This part is a bit complex, because a lot of different data go into
+#' the evidence plots. To create a plot, following elements are necessary:
+#'
+#'  * ordered gene list: this is the same gene list that is used as an
+#'    input to tmod
+#'  * a list of tmod gene set databases for which the enrichments have been run
+#'  * contrast data frame – for displaying gene names in color
+#'  * if no gene list is given, then using the contrast data frame it is
+#'    possible to create a list ordered by p-values. However, since the
+#'    gene set database might use a different type of identifiers than the
+#'    PrimaryID column of the contrasts data frame, it is necessary to
+#'    provide a mapping between the PrimaryIDs and the database gene IDs as well.
+#'
+#' 
+#'
+#' **tmod gene lists**. To display an evidence plot, we need to have an
+#' ordered list of genes. This has to be provided from outside, as many
+#' different sortings are possible. The parameter tmod_gl is a multi level 
+#' list:
+#'  * First level: contrasts
+#'  * Second level: gene set databases
+#'  * Third level: sorting type
+#' 
+#' For example, then the `tmod_gl[["Contrast1"]][["tmod"]][["pval"]]` is a
+#' vector of gene identifiers which come from the tmod database (in this
+#' case, gene names). The vector is named and the names are primary IDs
+#' matching the contrast data frames.
+#'
+#' If this argument is NULL, then the genes will be ordered by p-values
+#' from the contrast object provided. However, in this case it is necessary
+#' to provide a mapping between the PrimaryIDs of the contrasts and the
+#' gene identifiers used by the gene set database.
+#'
+#' @param id ID of the shiny module
 #' @param selmod a reactive
 #' value (e.g. returned by tmodBrowserTableServer) and a list containing
 #' the module id, tmod dataset id, contrast id and sorting type
-#' @param pip pipeline object returned by `load_de_pipeline`
 #' @param tmod_dbs tmod gene set databases returned by `get_tmod_dbs()`
 #' @param tmod_map tmod gene set ID mapping returned by `get_tmod_mapping()`
-#' @param id identifier (same as the one passed to geneBrowserTableUI)
+#' @param tmod_gl tmod gene lists. See details.
+#' #' @param id identifier (same as the one passed to geneBrowserTableUI)
 #' @param cntr list of contrast results returned by `get_contrasts()`
 #' @param annot data frame containing gene annotation 
 #' @return returns a reactive value with a selected gene identifier
+#' @importFrom shinyBS popify
 #' @export
-tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr, annot=NULL) {
+tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmod_gl=NULL, annot=NULL) {
+
+  stopifnot(!is.null(tmod_gl) || !is.null(tmod_map))
+
   moduleServer(id, function(input, output, session) {
     message("Launching tmod plot server")
 
@@ -121,25 +227,27 @@ tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr, ann
     output$evidencePlot <- renderPlot({
       mod <- req(selmod())
       enable("save")
+
       output$cmdline <- renderText({
         sprintf('plot_evidence(pip, id="%s", dbname="%s", contrast="%s")', 
                 mod$id, mod$db, mod$cntr)
       })
-      plot_evidence(pip, id=mod$id, dbname=mod$db, contrast=mod$cntr, tmod_dbs_obj=tmod_dbs)
-    })
+
+      .plot_evidence(mod_id=mod$id, cntr_id=mod$cntr, db_id=mod$db, sort_id=mod$sort, 
+                     cntr=cntr, tmod_dbs=tmod_dbs, tmod_gl=tmod_gl, tmod_map=tmod_map, annot=annot)
+    }, width=800, height=600)
 
 
     output$modinfo <- renderText({
       mod <- req(selmod())
-      ret <- .tmod_browser_mod_info(pip, 
-                                    mod$id, mod$db, mod$cntr, mod$cntr, 
+      ret <- .tmod_browser_mod_info(mod$id, mod$db, mod$cntr, mod$sort, 
                                     tmod_dbs, cntr, tmod_map)
       return(ret)
     })
 
     output$moduleGenes <- renderDataTable({
       mod <- req(selmod())
-      .tmod_browser_gene_table(pip, as.character(gene.but),
+      .tmod_browser_gene_table(as.character(gene.but),
                                     mod$id, mod$db, mod$cntr, mod$cntr, 
                                     tmod_dbs, cntr, tmod_map)
     })
@@ -158,8 +266,8 @@ tmodBrowserPlotServer <- function(id, selmod, pip, tmod_dbs, tmod_map, cntr, ann
         pdf(file=file, width=8, height=5)
         title <- sprintf("%s / %s\nContrast: %s / %s", 
                          mod$id, mod$db, mod$cntr, mod$sort)
-        plot_evidence(pip, id=mod$id, dbname=mod$db, contrast=mod$cntr,
-                      tmod_dbs_obj=tmod_dbs, tmod_dbs_mapping_obj=tmod_map, main=title)
+        .plot_evidence(mod_id=mod$id, cntr_id=mod$cntr, db_id=mod$db, sort_id=mod$sort, 
+                     cntr=cntr, tmod_dbs=tmod_dbs, tmod_gl=tmod_gl, tmod_map=tmod_map, annot=annot)
         dev.off()
       }
     )

@@ -108,6 +108,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
   config   <- get_config(pip)
   covar    <- get_covariates(pip)
   annot_linkout <- .prep_annot_linkout(annot, config)
+  tmod_gl  <- get_object(pip, step="tmod", extension="gl.rds", multiple_ok=TRUE)
 
   if(is.null(tmod_dbs)) {
     message(" * Loading tmod_dbs (consider using the tmod_rdbses option to speed this up)")
@@ -210,7 +211,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
 
     gene_id1 <- geneBrowserTableServer("geneT", cntr, annot, annot_linkout=annot_linkout)
     mod_id   <- tmodBrowserTableServer("tmodT", tmod_res)
-    gene_id3 <- tmodBrowserPlotServer("tmodP", mod_id, pip, tmod_dbs, tmod_map, cntr)
+    gene_id3 <- tmodBrowserPlotServer("tmodP", mod_id, tmod_dbs, cntr, tmod_map, tmod_gl, annot)
     gene_id2 <- discoServer("disco", cntr, annot)
 
     pcaServer("pca", pca$x, covar)

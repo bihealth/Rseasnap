@@ -7,22 +7,31 @@
 \usage{
 tmodBrowserPlotUI(id)
 
-tmodBrowserPlotServer(id, selmod, pip, tmod_dbs, tmod_map, cntr, annot = NULL)
+tmodBrowserPlotServer(
+  id,
+  selmod,
+  tmod_dbs,
+  cntr,
+  tmod_map = NULL,
+  tmod_gl = NULL,
+  annot = NULL
+)
 }
 \arguments{
-\item{id}{identifier (same as the one passed to geneBrowserTableUI)}
+\item{id}{ID of the shiny module}
 
 \item{selmod}{a reactive
 value (e.g. returned by tmodBrowserTableServer) and a list containing
 the module id, tmod dataset id, contrast id and sorting type}
 
-\item{pip}{pipeline object returned by \code{load_de_pipeline}}
-
 \item{tmod_dbs}{tmod gene set databases returned by \code{get_tmod_dbs()}}
+
+\item{cntr}{list of contrast results returned by \code{get_contrasts()}}
 
 \item{tmod_map}{tmod gene set ID mapping returned by \code{get_tmod_mapping()}}
 
-\item{cntr}{list of contrast results returned by \code{get_contrasts()}}
+\item{tmod_gl}{tmod gene lists. See details.
+#' @param id identifier (same as the one passed to geneBrowserTableUI)}
 
 \item{annot}{data frame containing gene annotation}
 }
@@ -31,4 +40,39 @@ returns a reactive value with a selected gene identifier
 }
 \description{
 Shiny Module – gene browser evidence plots
+}
+\details{
+This part is a bit complex, because a lot of different data go into
+the evidence plots. To create a plot, following elements are necessary:
+\itemize{
+\item ordered gene list: this is the same gene list that is used as an
+input to tmod
+\item a list of tmod gene set databases for which the enrichments have been run
+\item contrast data frame – for displaying gene names in color
+\item if no gene list is given, then using the contrast data frame it is
+possible to create a list ordered by p-values. However, since the
+gene set database might use a different type of identifiers than the
+PrimaryID column of the contrasts data frame, it is necessary to
+provide a mapping between the PrimaryIDs and the database gene IDs as well.
+}
+
+\strong{tmod gene lists}. To display an evidence plot, we need to have an
+ordered list of genes. This has to be provided from outside, as many
+different sortings are possible. The parameter tmod_gl is a multi level
+list:
+\itemize{
+\item First level: contrasts
+\item Second level: gene set databases
+\item Third level: sorting type
+}
+
+For example, then the \code{tmod_gl[["Contrast1"]][["tmod"]][["pval"]]} is a
+vector of gene identifiers which come from the tmod database (in this
+case, gene names). The vector is named and the names are primary IDs
+matching the contrast data frames.
+
+If this argument is NULL, then the genes will be ordered by p-values
+from the contrast object provided. However, in this case it is necessary
+to provide a mapping between the PrimaryIDs of the contrasts and the
+gene identifiers used by the gene set database.
 }

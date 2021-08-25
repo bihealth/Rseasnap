@@ -24,12 +24,12 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
                     bsTooltip(NS(id, "db"), "Gene set database to be shown")),
            fluidRow(selectInput(NS(id, "sort"),      label="Sorting",  choices=sorting,     width="100%"),
                     bsTooltip(NS(id, "sort"), "Sorting order for the enrichment")),
-           fluidRow(numericInput(NS(id, "gene_pval"), label="P-value significance threshold for genes", 
+           fluidRow(popify(numericInput(NS(id, "gene_pval"), label="P-value significance threshold for genes", 
                                  value = 0.05, min=0, step=.01, width="100%"),
-                    bsTooltip(NS(id, "gene_pval"), ttip$gene_pval)),
-           fluidRow(numericInput(NS(id, "gene_lfc"), label="L2FC significance threshold for genes", 
+                    "P-value significance threshold for genes", ttip$gene_pval)),
+           fluidRow(popify(numericInput(NS(id, "gene_lfc"), label="L2FC significance threshold for genes", 
                                  value = 0.5, min=0, step=.1, width="100%"),
-                    bsTooltip(NS(id, "gene_lfc"), ttip$gene_pval)),
+                    "L2FC significance threshold for genes", ttip$gene_pval)),
            width=5),
         column(
            fluidRow(numericInput(NS(id, "font_size"), label="Relative font size", value = 1, 
@@ -72,6 +72,10 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
 #*  * lowest level is a data frame containing the actual result for the
 #*    given contrast, database and sorting.
 #' @param id Module ID
+#' @param dbs named character vector with the IDs and names of the gene set databases 
+#' @param sorting named character vector with the sorting types
+#' @param tmod_map mapping between the PrimaryIDs from the contrasts and
+#' the gene IDs from the gene set databases.
 #' @param cntr list of data frames with the results of differential
 #' expression analysis. Rownames must correspond to the 'PrimaryID' column
 #' of data frame annot.
