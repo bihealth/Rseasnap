@@ -108,7 +108,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
   config   <- get_config(pip)
   covar    <- get_covariates(pip)
   annot_linkout <- .prep_annot_linkout(annot, config)
-  tmod_gl  <- get_object(pip, step="tmod", extension="gl.rds", multiple_ok=TRUE)
+  tmod_gl  <- get_object(pip, step="tmod", extension="gl.rds", as_list=TRUE)
 
   if(is.null(tmod_dbs)) {
     message(" * Loading tmod_dbs (consider using the tmod_rdbses option to speed this up)")

@@ -210,14 +210,15 @@ get_annot <- function(x) {
 #' @param step of the pipeline
 #' @param extension of the object
 #' @param multiple_ok Whether it is OK to return multiple objects
+#' @param as_list Always return a list of objects
 #' @param contrast optional: choice of the contrast
 #' @return an object return by readRDS, or a list of objects
 #' @export
-get_object <- function(x, step, extension="rds", contrast=NULL, multiple_ok=TRUE) {
+get_object <- function(x, step, extension="rds", contrast=NULL, multiple_ok=TRUE, as_list=FALSE) {
 
   paths <- get_object_path(x, step, extension, contrast=contrast, multiple_ok=multiple_ok)
 
-  if(length(paths) > 1) {
+  if(length(paths) > 1 || as_list) {
     ret <- lapply(paths, function(p) seasnap_readRDS(x, p))
   } else {
     ret <- seasnap_readRDS(x, paths)
