@@ -141,8 +141,8 @@ tmodBrowserPlotUI <- function(id) {
         fluidRow(verbatimTextOutput(NS(id, "cmdline"))),
         fluidRow(
                  tabsetPanel(
-                             tabPanel("Plot", plotOutput(NS(id, "evidencePlot"), height="100%")),
-                             tabPanel("Genes", dataTableOutput(NS(id, "moduleGenes")))
+                             tabPanel("Plot", withSpinner(plotOutput(NS(id, "evidencePlot"), height="100%"))),
+                             tabPanel("Genes", withSpinner(dataTableOutput(NS(id, "moduleGenes"))))
                  )),
         width=7
       )

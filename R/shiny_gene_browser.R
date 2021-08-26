@@ -91,7 +91,7 @@ geneBrowserTableUI <- function(id, cntr_titles) {
       width=3
     ),
     mainPanel(
-      dataTableOutput(NS(id, "result_tbl")),
+      withSpinner(dataTableOutput(NS(id, "result_tbl"))),
       width=9
     )
   )

@@ -1,3 +1,7 @@
+options(spinner.color="#47336F")
+options(spinner.type=6)
+
+
 infoUI <- function(title) {
 
          #box(title="Principal Component Analysis", width=12, status="primary",

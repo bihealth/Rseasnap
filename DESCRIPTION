@@ -39,7 +39,8 @@ Imports:
     thematic,
     shinydashboard,
     shinyjs,
-    shinyBS
+    shinyBS,
+    shinycssloaders
 Suggests: 
     rmarkdown,
     S4Vectors

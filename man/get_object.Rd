@@ -4,7 +4,14 @@
 \alias{get_object}
 \title{Get a pipeline object}
 \usage{
-get_object(x, step, extension = "rds", contrast = NULL, multiple_ok = TRUE)
+get_object(
+  x,
+  step,
+  extension = "rds",
+  contrast = NULL,
+  multiple_ok = TRUE,
+  as_list = FALSE
+)
 }
 \arguments{
 \item{x}{an object of class seasnap_DE_pipeline}
@@ -16,6 +23,8 @@ get_object(x, step, extension = "rds", contrast = NULL, multiple_ok = TRUE)
 \item{contrast}{optional: choice of the contrast}
 
 \item{multiple_ok}{Whether it is OK to return multiple objects}
+
+\item{as_list}{Always return a list of objects}
 }
 \value{
 an object return by readRDS, or a list of objects

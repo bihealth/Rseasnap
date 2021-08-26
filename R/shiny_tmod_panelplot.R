@@ -1,4 +1,5 @@
 
+#' @importFrom shinycssloaders withSpinner
 #' @rdname tmodPanelPlotServer
 #' @export
 tmodPanelPlotUI <- function(id, dbs, sorting) {
@@ -46,7 +47,7 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
         width=3),
       mainPanel(
           column(width=12,
-            plotOutput(NS(id, "panelPlot"), height="100%"),
+            withSpinner(plotOutput(NS(id, "panelPlot"), height="100%")),
            ), width=9)
 
       )
@@ -162,9 +163,13 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
 
     lfcs  <- map_dfc(cntr, ~ .x[ match(genes_sel, .x[["PrimaryID"]]), ][["log2FoldChange"]])
     pvals <- map_dfc(cntr, ~ .x[ match(genes_sel, .x[["PrimaryID"]]), ][["padj"]])
+
+    ## XXX this is a workaround for a bug in tmod; in new versions it will
+    ## not be necessary.
     lfcs[ is.na(lfcs) ] <- 0
     pvals[ is.na(pvals) ] <- 1
 
+    message("calling tmodDecideTests")
     pie <- tmodDecideTests(g = mp[ genes_sel ], lfc = lfcs, pval = pvals, mset=dbobj,
       lfc.thr = gene_lfc, pval.thr = gene_pval)
 
