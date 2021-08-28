@@ -39,8 +39,6 @@
 ## create a datatable with the genes from a gene set
 .tmod_browser_gene_table <- function(but, id, db_name, cntr_name, sort_name, tmod_dbs, cntr, tmod_map) {
 
-  message("Generating gene table")
-
   db <- tmod_dbs[[db_name]][["dbobj"]]
   genes <- db[["MODULES2GENES"]][[id]]
   genes_pid <- .tmod_rev_db_map_ids(ids=genes, dbname=db_name, tmod_dbs_mapping_obj=tmod_map)
@@ -48,7 +46,6 @@
   ret <- cntr[[cntr_name]] %>% filter(.data[["PrimaryID"]] %in% genes_pid)
   ret <- ret %>% mutate('>' = sprintf(but, .data[["PrimaryID"]])) %>% relocate(all_of(">"), .before=1) %>%
     arrange(.data[["pvalue"]])
-  message(sprintf("Gene table with %d genes", nrow(ret)))
 
   datatable(ret, escape=FALSE, selection='none',
                 options=list(pageLength=5, dom="Bfrtip", scrollX=TRUE, buttons=c("copy", "csv", "excel"))) %>%
@@ -226,6 +223,7 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
     ## create the evidence plot and display the command line to replicate it
     output$evidencePlot <- renderPlot({
       mod <- req(selmod())
+      if(is.null(mod$id)) { return(NULL) }
       enable("save")
 
       output$cmdline <- renderText({
@@ -240,6 +238,7 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
 
     output$modinfo <- renderText({
       mod <- req(selmod())
+      if(is.null(mod$id)) { return(NULL) }
       ret <- .tmod_browser_mod_info(mod$id, mod$db, mod$cntr, mod$sort, 
                                     tmod_dbs, cntr, tmod_map)
       return(ret)
@@ -258,11 +257,13 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
     output$save <- downloadHandler(
       filename = function() {
         mod <- req(selmod())
+        if(is.null(mod$id)) { return(NULL) }
         ret <- sprintf("evidence_plot_%s_%s_%s.pdf", mod$db, mod$cntr, mod$id)
         return(ret)
       },
       content = function(file) {
         mod <- req(selmod())
+        if(is.null(mod$id)) { return(NULL) }
         pdf(file=file, width=8, height=5)
         title <- sprintf("%s / %s\nContrast: %s / %s", 
                          mod$id, mod$db, mod$cntr, mod$sort)
@@ -288,6 +289,7 @@ tmodBrowserTableUI <- function(id, cntr_titles, dbs, sorting) {
            fluidRow(selectInput(NS(id, "db"),       label="Database", choices=dbs,         width="100%")),
            fluidRow(selectInput(NS(id, "sort"),     label="Sorting",  choices=sorting,     width="100%")),
            fluidRow(
+             checkboxInput(NS(id, "filter"), label="Filter results", value=TRUE),
              numericInput(NS(id, "f_auc"),  label="Filter by AUC", 
                           min=.5, max=1.0, step=0.1, value=0.65, width="50%"),
              numericInput(NS(id, "f_pval"), label="Filter by FDR", 
@@ -327,9 +329,24 @@ tmodBrowserTableServer <- function(id, tmod_res) {
 
     tmod_res <- .tmod_browser_prepare_res(as.character(but), tmod_res)
 
+    observeEvent(input$filter, {
+                   if(input$filter) {
+                     enable("f_auc")
+                     enable("f_pval")
+                   } else {
+                     disable("f_auc")
+                     disable("f_pval")
+                   }
+    })
+
     output$tmodResTab <- renderDataTable({
-      res <- tmod_res[[input$contrast]][[input$db]][[input$sort]] %>%
+      res <- tmod_res[[input$contrast]][[input$db]][[input$sort]] 
+      
+      if(input$filter) {
+        res <- res %>%
         filter(.data[["AUC"]] > input$f_auc & .data[["adj.P.Val"]] < input$f_pval)
+      }
+
       datatable(res, escape=FALSE, selection='none', options=list(pageLength=5)) %>%
         formatSignif(columns=intersect(colnames(res), 
                                        c("AUC", "cerno", "P.Value", "adj.P.Val")), digits=2)

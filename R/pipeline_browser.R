@@ -196,7 +196,8 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
          
       tabItem("help",
          helpUI())
-    )
+    ),
+    style="min-height:1500px;"
   )
 
   ui <- dashboardPage(header, sidebar, body, skin="purple", title=title)
@@ -212,13 +213,24 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
     ## this reactive value holds the id of the selected gene, however the
     ## selection has been done
     gene_id <- reactiveVal()
+    mod_id  <- reactiveVal()
+    mod_id(list())
 
     gene_id1 <- geneBrowserTableServer("geneT", cntr, annot, annot_linkout=annot_linkout)
-    mod_id   <- tmodBrowserTableServer("tmodT", tmod_res)
+    mod_id1  <- tmodBrowserTableServer("tmodT", tmod_res)
     gene_id3 <- tmodBrowserPlotServer("tmodP", mod_id, tmod_dbs, cntr, tmod_map, tmod_gl, annot)
     gene_id2 <- discoServer("disco", cntr, annot)
 
     pcaServer("pca", pca$x, covar)
+    
+    ## combine events selecting a gene set 
+    observeEvent(mod_id1(),  { 
+                   mod_id(mod_id1()) 
+    })
+    observeEvent(mod_id2(), { 
+      updateTabItems(session, "navid", "tmod_browser")
+      mod_id(mod_id2()) 
+    })
 
     ## combine events selecting a gene from gene browser and from disco
     observeEvent(gene_id1(), { gene_id(gene_id1()) })
@@ -233,7 +245,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
 
     geneBrowserPlotServer("geneP", gene_id, covar=covar, 
                           exprs=rld, annot=annot, cntr=cntr)
-    tmodPanelPlotServer("panelP", cntr=cntr, tmod_res=tmod_res,
+    mod_id2 <- tmodPanelPlotServer("panelP", cntr=cntr, tmod_res=tmod_res,
                         tmod_dbs=tmod_dbs, tmod_map=tmod_map, annot=annot)
   }
 

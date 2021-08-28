@@ -1,6 +1,9 @@
 a { color: #7A62A3 }
 
 
+.content-wrapper {
+  min-height:1500px;
+}
 
 .logo { background-color: #47336F !important; }
 /*.navbar { background-color: #7A62A3 !important; } */
@@ -98,8 +101,4 @@ a { color: #7A62A3 }
       border-left-color:#666666;
       border-right-color:#666666;
       border-top-color:#666666;
-}
 
-.content-wrapper {
-  min-height:1400px !important;
-}

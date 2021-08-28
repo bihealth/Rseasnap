@@ -1,6 +1,6 @@
 Package: Rseasnap
 Title: Utilities for the sea-snap pipeline
-Version: 0.2.3
+Version: 0.2.4
 Authors@R: 
     person(given = "January",
            family = "Weiner",
@@ -28,6 +28,7 @@ Imports:
     plotly,
     purrr,
     tibble,
+    tidyr,
     tmod,
     yaml,
     DT,

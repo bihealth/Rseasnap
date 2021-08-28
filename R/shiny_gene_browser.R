@@ -80,6 +80,7 @@ geneBrowserTableUI <- function(id, cntr_titles) {
         fluidRow(selectInput(NS(id, "contrast"), label = "Contrast", choices = cntr_titles, width="100%")),
         fluidRow(
                  column(6,
+                 checkboxInput(NS(id, "filter"), "Filter", TRUE, width="100%"),
                  numericInput(NS(id, "f_lfc"),    label="Filter by abs(LFC)", min=0, value=0.5, step=.1, width="100%"),
                  numericInput(NS(id, "f_pval"),    label="Filter by FDR", min=0, max=1.0, value=0.05, step=.1, width="100%")), column(6,
                  selectInput(NS(id, "f_dir"), label="Direction", choices=c(Any="an", Up="up", "Down"="dw"), 
@@ -144,6 +145,18 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL) {
       gene_id(gsub("^go_", "", input$select_button))
     })
 
+    observeEvent(input$filter, {
+                   if(length(input$filter) > 0 && input$filter) {
+                     enable("f_dir")
+                     enable("f_pval")
+                     enable("f_lfc")
+                   } else {
+                     disable("f_dir")
+                     disable("f_pval")
+                     disable("f_lfc")
+                   }
+    })
+
     output$id_summary <- renderText({
       .cntr <- input$contrast
       sprintf("Contrast is %s", .cntr)
@@ -151,14 +164,17 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL) {
 
     output$result_tbl <- DT::renderDataTable({
       res <- cntr[[ input$contrast ]]
-      if(input$f_dir == "up") {
-        res <- res %>% filter(.data[["log2FoldChange"]] > 0)
-      } else if(input$f_dir == "dw") {
-        res <- res %>% filter(.data[["log2FoldChange"]] < 0)
+      if(input$filter) {
+        if(input$f_dir == "up") {
+          res <- res %>% filter(.data[["log2FoldChange"]] > 0)
+        } else if(input$f_dir == "dw") {
+          res <- res %>% filter(.data[["log2FoldChange"]] < 0)
+        }
+
+        res <- res %>% filter(.data[["padj"]] < input$f_pval & abs(.data[["log2FoldChange"]]) > input$f_lfc) 
       }
 
-      res %>% filter(.data[["padj"]] < input$f_pval & abs(.data[["log2FoldChange"]]) > input$f_lfc) %>%
-      datatable(escape=FALSE, selection='none', extensions="Buttons",
+      res %>% datatable(escape=FALSE, selection='none', extensions="Buttons",
                 options=list(pageLength=5, dom="Bfrtip", scrollX=TRUE, buttons=c("copy", "csv", "excel"))) %>%
         formatSignif(columns=intersect(colnames(cntr[[ input$contrast ]]), 
                                        c("baseMean", "log2FoldChange", "pvalue", "padj")), digits=2)
