@@ -7,12 +7,35 @@
 gg_panelplot(
   res,
   pie,
-  auc_thr = 0.65,
+  auc_thr = 0.5,
   q_thr = 0.05,
-  filter_row_pval = 0.01,
+  filter_row_q = 0.01,
   filter_row_auc = 0.65,
-  pval_cutoff = 1e-12
+  q_cutoff = 1e-12,
+  label_angle = 45
 )
+}
+\arguments{
+\item{res}{a list with tmod results (each element of the list is a data
+frame returned by a tmod test function)}
+
+\item{pie}{a list with summaries of significantly DE genes by gene set.
+Each a element of the list is a matrix returned by tmodDecideTests.}
+
+\item{auc_thr}{gene sets enrichments with AUC below \code{auc_thr} will not be shown}
+
+\item{q_thr}{gene sets enrichments with q (adjusted P value) above \code{q_thr} will not be shown}
+
+\item{filter_row_q}{Gene sets will only be shown if at least in one
+contrast q is smaller than \code{filter_row_q}}
+
+\item{filter_row_auc}{Gene sets will only be shown if at least in one
+contrast AUC is larger than \code{filter_row_q}}
+
+\item{q_cutoff}{Any q value below \code{q_cutoff} will be considered equal to
+\code{q_cutoff}}
+
+\item{label_angle}{The angle at which column labels are shown}
 }
 \description{
 Create a tmod panel plot using ggplot

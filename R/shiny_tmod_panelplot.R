@@ -12,13 +12,26 @@
 #' Create a tmod panel plot using ggplot
 #'
 #' Create a tmod panel plot using ggplot
+#' @param res a list with tmod results (each element of the list is a data
+#' frame returned by a tmod test function)
+#' @param pie a list with summaries of significantly DE genes by gene set.
+#' Each a element of the list is a matrix returned by tmodDecideTests.
+#' @param auc_thr gene sets enrichments with AUC below `auc_thr` will not be shown
+#' @param q_thr gene sets enrichments with q (adjusted P value) above `q_thr` will not be shown
+#' @param filter_row_q Gene sets will only be shown if at least in one
+#' contrast q is smaller than `filter_row_q`
+#' @param filter_row_auc Gene sets will only be shown if at least in one
+#' contrast AUC is larger than `filter_row_q`
+#' @param q_cutoff Any q value below `q_cutoff` will be considered equal to
+#' `q_cutoff`
+#' @param label_angle The angle at which column labels are shown
 #' @importFrom tidyr pivot_longer pivot_wider everything
 #' @importFrom tibble rownames_to_column
 #' @export
-gg_panelplot <- function(res, pie, auc_thr=.65, q_thr=.05,
-                         filter_row_pval=.01,
+gg_panelplot <- function(res, pie, auc_thr=.5, q_thr=.05,
+                         filter_row_q=.01,
                          filter_row_auc=.65,
-                         pval_cutoff=1e-12,
+                         q_cutoff=1e-12,
                          label_angle=45) {
 
   label_angle=as.numeric(label_angle)
@@ -43,8 +56,8 @@ gg_panelplot <- function(res, pie, auc_thr=.65, q_thr=.05,
     mutate("q" = ifelse(is.na(.data[["q"]]), 1, .data[["q"]])) %>%
     mutate("AUC" = ifelse(is.na(.data[["AUC"]]), .5, .data[["AUC"]])) %>%
     filter(.data[["AUC"]] > auc_thr & .data[["q"]] < q_thr) %>%
-    mutate(q = ifelse(.data[["q"]] < pval_cutoff, pval_cutoff, .data[["q"]])) %>%
-    mutate(alpha = -log10(.data[["q"]]) / -log10(pval_cutoff))
+    mutate(q = ifelse(.data[["q"]] < q_cutoff, q_cutoff, .data[["q"]])) %>%
+    mutate(alpha = -log10(.data[["q"]]) / -log10(q_cutoff))
 
   selMod <- resS$ID
   if(!is.na(filter_row_auc)) {
@@ -52,8 +65,8 @@ gg_panelplot <- function(res, pie, auc_thr=.65, q_thr=.05,
     selMod <- intersect(selMod, .s)
   }
 
-  if(!is.na(filter_row_pval)) {
-    .s <- resS_l %>% filter(.data[["q"]] < filter_row_pval) %>% pull("ID")
+  if(!is.na(filter_row_q)) {
+    .s <- resS_l %>% filter(.data[["q"]] < filter_row_q) %>% pull("ID")
     selMod <- intersect(selMod, .s)
   }
 
@@ -70,7 +83,7 @@ gg_panelplot <- function(res, pie, auc_thr=.65, q_thr=.05,
 
   df <- merge(resS_l, pieS, by=c("ID", "Contrast"), all.x=TRUE) %>%
     group_by(paste(.data[["ID"]], .data[["Contrast"]])) %>%
-    mutate(Tot=sum(Number)) %>%
+    mutate(Tot=sum(.data[["Number"]])) %>%
     ungroup() %>%
     mutate(Number = .data[["Number"]] * .data[["AUC"]] / .data[["Tot"]]) %>%
     mutate(Direction = factor(.data[["Direction"]], levels=c("up", "N", "down"))) 
@@ -219,6 +232,7 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
 #' @param tmod_dbs list of 
 #' @return Returns a reactive value which is a list with elements
 #' `contrast` and `id`.
+#' @importFrom shiny observe selectizeInput
 #' @importFrom shinyBS bsTooltip addTooltip
 #' @export
 tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NULL) {
@@ -245,7 +259,7 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
         pdf(file=file, width=fig_width() / 75, height=fig_height() / 75)
         gg_panelplot(res(), pie=pie(), 
                      filter_row_auc=input$filter_auc,
-                     filter_row_pval=input$filter_pval,
+                     filter_row_q=input$filter_pval,
                      label_angle=input$label_angle) + 
                                    theme(text=element_text(size=input$font_size))
         dev.off()
@@ -310,7 +324,7 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
 
       g <- gg_panelplot(res(), pie=pie(), 
                      filter_row_auc=input$filter_auc,
-                     filter_row_pval=input$filter_pval,
+                     filter_row_q=input$filter_pval,
                      label_angle=input$label_angle) + 
                                    theme(text=element_text(size=input$font_size))
 

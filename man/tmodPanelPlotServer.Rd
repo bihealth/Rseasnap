@@ -30,6 +30,10 @@ the gene IDs from the gene set databases.}
 
 \item{annot}{data frame containing at least the column 'PrimaryID'}
 }
+\value{
+Returns a reactive value which is a list with elements
+\code{contrast} and \code{id}.
+}
 \description{
 Shiny module displaying tmod panel plots
 }
