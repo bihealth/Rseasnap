@@ -2,12 +2,8 @@ options(spinner.color="#47336F")
 options(spinner.type=6)
 
 
+## UI for the information about the pipeline
 infoUI <- function(title) {
-
-         #box(title="Principal Component Analysis", width=12, status="primary",
-         #solidHeader=TRUE, pcaUI("pca", covar, colnames(pca$x))),
-         #useShinyjs()
-  
 
   column(width=12,
     box(title=sprintf("%s: overview", title), width=6,
@@ -28,14 +24,11 @@ infoUI <- function(title) {
     )))
   )
 
-
-
 }
 
 
+## UI for the help system
 helpUI <- function() {
-
-
   help_dir <- system.file("seapiper_manual/", package="Rseasnap")
 
   help_files <- list.files(help_dir, full.names = TRUE)
@@ -49,6 +42,73 @@ helpUI <- function() {
 
   do.call(tagList, ret)
 }
+
+
+.pipeline_dashboard_sidebar <- function() {
+  dashboardSidebar(
+       tags$head(
+                 tags$link(rel = "stylesheet", type = "text/css", href = "css/seapiper.css"),
+                 tags$link(rel="icon", type="image/png", sizes="32x32", href="icons/favicon-32x32.png"),
+                 tags$link(rel="icon", type="image/png", sizes="16x16", href="icons/favicon-16x16.png"),
+                 tags$link(rel="shortcut icon", type="image/x-icon", sizes="16x16", href="icons/favicon.ico")),
+       sidebarMenu(
+         # Setting id makes input$tabs give the tabName of currently-selected tab
+         id = "navid",
+         menuItem("Gene browser",  tabName = "gene_browser", icon = icon("dna")),
+         menuItem("Tmod browser",  tabName = "tmod_browser", icon = icon("project-diagram")),
+         menuItem("Disco plots",   tabName = "disco", icon = icon("chart-line")),
+         menuItem("Panel plots",   tabName = "panel_plot", icon = icon("grip-vertical")),
+         menuItem("PCA",           tabName = "pca", icon = icon("cube")),
+         menuItem("Pipeline Info", tabName = "pip_info", icon = icon("info-circle")),
+         menuItem("Help",          tabName = "help", icon = icon("question-circle"))
+       )
+  )
+
+}
+
+
+## prepare the actual tabs UI
+.pipeline_dashboard_body <- function(cntr_titles, dbs, sorting, pca_names, covar, title) {
+      t1 <- tabItem("gene_browser",
+         box(title="Gene table", width=12, status="primary", 
+             collapsible=TRUE,
+             solidHeader=TRUE, geneBrowserTableUI("geneT", cntr_titles)),
+         box(title="Gene info",  width=12, status="primary", 
+             collapsible=TRUE,
+             solidHeader=TRUE, geneBrowserPlotUI("geneP", covar, contrasts=TRUE))
+      )
+      t2 <- tabItem("tmod_browser",
+         box(title="Gene set enrichment overview", width=12, status="primary",
+             collapsible=TRUE,
+             solidHeader=TRUE, tmodBrowserTableUI("tmodT", cntr_titles, dbs, sorting)),
+         box(title="Evidence plot", width=12, status="primary",
+             collapsible=TRUE,
+             solidHeader=TRUE, tmodBrowserPlotUI("tmodP"))
+      )
+      t3 <- tabItem("disco",
+         box(title="Discordance / concordance plots", width=12, status="primary",
+         height="800px", solidHeader=TRUE, discoUI("disco", cntr_titles)),
+         )
+      t4 <- tabItem("panel_plot",
+         box(title="Panel plot", width=12, status="primary",
+             solidHeader=TRUE, tmodPanelPlotUI("panelP", dbs, sorting)))
+      t5 <- tabItem("pca",
+         box(title="Principal Component Analysis", width=12, status="primary",
+         solidHeader=TRUE, pcaUI("pca", covar, pca_names)),
+         useShinyjs()
+         )
+      t6 <- tabItem("pip_info", 
+         infoUI(title))
+         
+      t7 <- tabItem("help", helpUI())
+  dashboardBody(
+    tabItems(
+             t1, t2, t3, t4, t5, t6, t7
+    ),
+    style="min-height:1500px;"
+  )
+}
+
 
 #' Sea-snap pipeline browser
 #'
@@ -133,74 +193,20 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
 
   thematic_shiny(font="auto")
 
+  ## Prepare the UI
   header <- dashboardHeader(title=img(src="icons/piper_horiz.png", alt="[seaPiper]"),
     tags$li(class="dropdown", h4(title, style="font-size:22px;color:white;padding-right:20px;"))
   )
      
-  sidebar <- dashboardSidebar(
-       tags$head(
-                 tags$link(rel = "stylesheet", type = "text/css", href = "css/seapiper.css"),
-                 tags$link(rel="icon", type="image/png", sizes="32x32", href="icons/favicon-32x32.png"),
-                 tags$link(rel="icon", type="image/png", sizes="16x16", href="icons/favicon-16x16.png"),
-                 tags$link(rel="shortcut icon", type="image/x-icon", sizes="16x16", href="icons/favicon.ico")),
-       sidebarMenu(
-         # Setting id makes input$tabs give the tabName of currently-selected tab
-         id = "navid",
-         menuItem("Gene browser",  tabName = "gene_browser", icon = icon("dna")),
-         menuItem("Tmod browser",  tabName = "tmod_browser", icon = icon("project-diagram")),
-         menuItem("Disco plots",   tabName = "disco", icon = icon("chart-line")),
-         menuItem("Panel plots",   tabName = "panel_plot", icon = icon("grip-vertical")),
-         menuItem("PCA",           tabName = "pca", icon = icon("cube")),
-         menuItem("Pipeline Info", tabName = "pip_info", icon = icon("info-circle")),
-         menuItem("Help",          tabName = "help", icon = icon("question-circle"))
-       )
-     )
-     
+  sidebar <-  .pipeline_dashboard_sidebar()
+  body <- .pipeline_dashboard_body(cntr_titles, dbs, sorting, colnames(pca$x), covar, title)
+  ui <- dashboardPage(header, sidebar, body, skin="purple", title=title)
+
   #   theme = bs_theme(primary = "#47336F", secondary = "#C6B3EB", 
   #                           font_scale = NULL, 
   #                           `enable-shadows` = TRUE, 
   #                           bootswatch = "united"),
 
-  body <- dashboardBody(
-    tabItems(
-      tabItem("gene_browser",
-         box(title="Gene table", width=12, status="primary", 
-             collapsible=TRUE,
-             solidHeader=TRUE, geneBrowserTableUI("geneT", cntr_titles)),
-         box(title="Gene info",  width=12, status="primary", 
-             collapsible=TRUE,
-             solidHeader=TRUE, geneBrowserPlotUI("geneP", covar, contrasts=TRUE))
-      ),
-      tabItem("tmod_browser",
-         box(title="Gene set enrichment overview", width=12, status="primary",
-             collapsible=TRUE,
-             solidHeader=TRUE, tmodBrowserTableUI("tmodT", cntr_titles, dbs, sorting)),
-         box(title="Evidence plot", width=12, status="primary",
-             collapsible=TRUE,
-             solidHeader=TRUE, tmodBrowserPlotUI("tmodP"))
-      ),
-      tabItem("disco",
-         box(title="Discordance / concordance plots", width=12, status="primary",
-         height="800px", solidHeader=TRUE, discoUI("disco", cntr_titles)),
-         ),
-      tabItem("panel_plot",
-         box(title="Panel plot", width=12, status="primary",
-             solidHeader=TRUE, tmodPanelPlotUI("panelP", dbs, sorting))),
-      tabItem("pca",
-         box(title="Principal Component Analysis", width=12, status="primary",
-         solidHeader=TRUE, pcaUI("pca", covar, colnames(pca$x))),
-         useShinyjs()
-         ),
-      tabItem("pip_info", 
-         infoUI(title)),
-         
-      tabItem("help",
-         helpUI())
-    ),
-    style="min-height:1500px;"
-  )
-
-  ui <- dashboardPage(header, sidebar, body, skin="purple", title=title)
 
   server <- function(input, output, session) {
 
@@ -217,9 +223,11 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
     mod_id(list())
 
     gene_id1 <- geneBrowserTableServer("geneT", cntr, annot, annot_linkout=annot_linkout)
-    mod_id1  <- tmodBrowserTableServer("tmodT", tmod_res)
     gene_id3 <- tmodBrowserPlotServer("tmodP", mod_id, tmod_dbs, cntr, tmod_map, tmod_gl, annot)
     gene_id2 <- discoServer("disco", cntr, annot)
+    mod_id1  <- tmodBrowserTableServer("tmodT", tmod_res)
+    mod_id2  <- tmodPanelPlotServer("panelP", cntr=cntr, tmod_res=tmod_res,
+                        tmod_dbs=tmod_dbs, tmod_map=tmod_map, annot=annot)
 
     pcaServer("pca", pca$x, covar)
     
@@ -245,8 +253,6 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
 
     geneBrowserPlotServer("geneP", gene_id, covar=covar, 
                           exprs=rld, annot=annot, cntr=cntr)
-    mod_id2 <- tmodPanelPlotServer("panelP", cntr=cntr, tmod_res=tmod_res,
-                        tmod_dbs=tmod_dbs, tmod_map=tmod_map, annot=annot)
   }
 
   shinyApp(ui, server)
