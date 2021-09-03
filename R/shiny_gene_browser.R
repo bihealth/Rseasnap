@@ -1,17 +1,36 @@
 ## prepare contrasts for the gene browser, adding action button, sorting,
 ## removing unnecessary columns etc.
-.gene_browser_prep_res <- function(cntr, but, annot, annot_linkout) {
+.gene_browser_prep_res <- function(cntr, but, annot, annot_linkout, primary_id) {
 
+	names(cntr_ids) <- cntr_ids <- names(cntr)
+
+  cntr <- map(cntr_ids, ~
+              .gene_browser_prep_res_single(
+                                            .x,
+                                            cntr[[.x]],
+                                            but,
+                                            annot[[.x]],
+                                            annot_linkout[[.x]],
+                                            primary_id))
+  return(cntr) 
+}
+
+## this function runs the preparation for a single dataset
+.gene_browser_prep_res_single <- function(ds_id, cntr, but, annot, annot_linkout, primary_id) {
   cntr   <- cntr %>% 
-    map(~ { .x %>% mutate('>'= sprintf(but, PrimaryID)) }) %>%
+    map(~ { .x %>% mutate('>'= sprintf(but, ds_id, .data[[primary_id]])) }) %>%
     map(~ { .x %>% select(all_of(setdiff(colnames(.x), c("stat", "lfcSE", "symbol", "entrez")))) }) %>%
-    map(~ { .x %>% { merge(annot, ., by="PrimaryID", all.x=TRUE) } %>% relocate(all_of(">"), .before=1) %>% arrange(pvalue)})
+    map(~ { .x %>% { merge(annot, ., by=primary_id, all.x=TRUE) } %>% 
+        relocate(all_of(">"), .before=1) %>% arrange(pvalue)})
 
   if(!is.null(annot_linkout)) {
     cntr <- map(cntr, ~ {
                          for(n in names(annot_linkout)) {
                            fmt <- sprintf('<a href="%s" target="_blank">%%s</a>', annot_linkout[[n]])
-                           .x[[n]] <- ifelse(is.na(.x[[n]]) | .x[[n]] == "", .x[[n]], sprintf(fmt, .x[[n]], .x[[n]]))
+                           .x[[n]] <- ifelse(
+                                             is.na(.x[[n]]) | .x[[n]] == "", 
+                                             .x[[n]], 
+                                             sprintf(fmt, .x[[n]], .x[[n]]))
                          }
                          .x
     })
@@ -71,9 +90,32 @@
      return(ret)
 }
 
+.prep_cntr_titles <- function(cntr_titles) {
+
+  if(is.list(cntr_titles)) {
+    cntr_titles <- imap(cntr_titles, ~ {
+                        ret <- paste0(.y, '::', .x)
+                        #names(ret) <- paste0(.y, ": ", names(.x))
+                        names(ret) <- names(.x)
+                        ret
+         })
+    if(length(cntr_titles) < 2) {
+      cntr_titles <- cntr_titles[[1]]
+    }
+  } else {
+    tmp <- cntr_titles
+    cntr_titles <- paste0("ID1::", tmp)
+    names(cntr_titles) <- names(tmp)
+  }
+
+  return(cntr_titles)
+}
+
 #' @rdname geneBrowserTableServer
 #' @export
 geneBrowserTableUI <- function(id, cntr_titles) {
+
+  cntr_titles <- .prep_cntr_titles(cntr_titles)
   but <- actionButton("foo", label=" \U25B6 ", class = "btn-primary btn-sm")
   sidebarLayout(
     sidebarPanel(
@@ -98,10 +140,63 @@ geneBrowserTableUI <- function(id, cntr_titles) {
   )
 }
 
+## check whether data is list of lists or just a list of dfs
+.check_multilevel <- function(cntr) {
+
+  !any(map_lgl(cntr, is.data.frame)) 
+
+}
+
+.check_params <- function(multilevel, annot=NULL, cntr=NULL, annot_linkout=NULL, primary_id="PrimaryID") {
+
+  if(!is.null(cntr)) {
+    stopifnot(!is.null(names(cntr)))
+
+    if(multilevel) {
+      for(c in names(cntr)) {
+        stopifnot(all(map_lgl(cntr[[c]], is.data.frame)))
+      }
+    }
+  }
+
+  if(!is.null(annot)) {
+    if(multilevel) {
+      stopifnot(all(map_lgl(annot, is.data.frame)))
+      stopifnot(all(map_lgl(annot, ~ primary_id %in% colnames(.x))))
+    } else {
+      stopifnot(is.data.frame(annot))
+      stopifnot(primary_id %in% colnames(annot))
+    }
+  }
+
+  if(!is.null(annot) && !is.null(cntr)) {
+    if(multilevel) {
+      stopifnot(!is.null(names(annot)))
+      stopifnot(all(names(cntr) %in% names(annot)))
+    }
+  }
+}
+
 
 #' Shiny Module – gene browser table selection
 #'
 #' Shiny Module – gene browser table selection
+#'
+#' The basic data set structure that this module takes is a named list of data
+#' frames. These data frames will be shown in the browser when the specific
+#' contrast (corresponding to a name in the list) is selected from the
+#' configuration sidebar. The data frames *must* contain a column called
+#' "PrimaryID" (this identifier can be changed with the parameter
+#' `primary_id`). This is necessary in order to link the table rows with
+#' e.g. plotting genes with `geneBrowserPlotServer`.
+#'
+#' Log2 fold changes must be stored in a column called
+#' "log2FoldChange", and p-values in a column called "padj". These are the
+#' default column names returned by DESeq2.
+#'
+#' Alternatively, tmodBrowserTableServer takes a list of lists of data
+#' frames; that is, it allows to group the results of differential gene
+#' analysis.
 #'
 #' The linkout feature (parameter `annot_linkout`) allows to define how the
 #' different columns from the annotation data frame are represented as
@@ -116,33 +211,43 @@ geneBrowserTableUI <- function(id, cntr_titles) {
 #' ```
 #' annot_linkout=list(ENSEMBL="https://www.ensembl.org/id/%s")
 #' ```
-#' @param cntr a list of data frames containing the DE analysis results
-#' @param annot annotation data frame containing column 'PrimaryID'
+#' @param cntr a list of data frames containing the DE analysis results, or
+#'             a list of lists of data frames
+#' @param annot annotation data frame containing column 'PrimaryID' (
+#'        or another specified by the parameter `primary_id`)
 #'        corresponding to the rownames of the contrast data frames
 #' @param id identifier for the namespace of the module
 #' @param cntr_titles named character vector for contrast choices
 #' @param annot_linkout a list; see Details. 
 #' @return reactive value containing the gene ID
 #' @export
-geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL) {
+geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL,
+                                   primary_id="PrimaryID") {
 
-  if(!is.null(annot_linkout)) {
-    stopifnot(all(names(annot_linkout) %in% names(annot)))
+  multilevel <- .check_multilevel(cntr)
+  .check_params(multilevel, cntr=cntr, annot=annot, 
+                annot_linkout=annot_linkout, primary_id=primary_id)
+
+  if(!multilevel) {
+    cntr <- list(ID1=cntr)
+    annot <- list(ID1=annot)
+    annot_linkout=list(ID1=annot_linkout)
   }
 
   moduleServer(id, function(input, output, session) {
 
+    gene_id <- reactiveVal(list(ds=NA, id=NA))
 
-    gene_id <- reactiveVal("")
-
-    but <- actionButton("go_%s", label=" \U25B6 ", 
+    but <- actionButton("go~%s~%s", label=" \U25B6 ", 
                          onclick=sprintf('Shiny.onInputChange(\"%s-select_button\",  this.id)', id),  
                          class = "btn-primary btn-sm")
 
-    cntr <- .gene_browser_prep_res(cntr, as.character(but), annot, annot_linkout)
+    cntr <- .gene_browser_prep_res(cntr, as.character(but), annot, 
+                                   annot_linkout, primary_id=primary_id)
 
     observeEvent(input$select_button, {
-      gene_id(gsub("^go_", "", input$select_button))
+      .ids <- strsplit(input$select_button, '~')[[1]]
+      gene_id(list(ds=.ids[2], id=.ids[3]))
     })
 
     observeEvent(input$filter, {
@@ -163,7 +268,11 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL) {
     })
 
     output$result_tbl <- DT::renderDataTable({
-      res <- cntr[[ input$contrast ]]
+
+      .cntr <- gsub(".*::", "", input$contrast)
+      .ds   <- gsub("::.*", "", input$contrast)
+
+      res <- cntr[[ .ds ]][[ .cntr ]]
       if(input$filter) {
         if(input$f_dir == "up") {
           res <- res %>% filter(.data[["log2FoldChange"]] > 0)
@@ -176,7 +285,7 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL) {
 
       res %>% datatable(escape=FALSE, selection='none', extensions="Buttons",
                 options=list(pageLength=5, dom="Bfrtip", scrollX=TRUE, buttons=c("copy", "csv", "excel"))) %>%
-        formatSignif(columns=intersect(colnames(cntr[[ input$contrast ]]), 
+        formatSignif(columns=intersect(colnames(res), 
                                        c("baseMean", "log2FoldChange", "pvalue", "padj")), digits=2)
     })
 
@@ -184,13 +293,14 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL) {
   })
 }
 
-#' @rdname geneBrowserPlotServer
-#' @export
-geneBrowserPlotUI <- function(id, covar, contrasts=FALSE) {
+.dynamic_col_control <- function(id, covar) {
+
+
   all_covars         <- covar %>% summary_colorDF() %>% filter(unique > 1) %>% pull(.data$Col)
   non_unique         <- covar %>% summary_colorDF() %>% filter(unique < nrow(covar)) %>% pull(.data$Col)
   default_covar <- .default_covar(covar, all_covars, default="group")
-  col_control <-  sidebarPanel(
+
+  tagList(
       fluidRow(downloadButton(NS(id, "save"), "Save plot to PDF", class="bg-success")),
       fluidRow(
       column(width=5, 
@@ -207,6 +317,18 @@ geneBrowserPlotUI <- function(id, covar, contrasts=FALSE) {
       fluidRow(textOutput(NS(id, "addInfo"))),
       fluidRow(verbatimTextOutput(NS(id, "geneData")))
     )
+
+
+}
+
+#' @rdname geneBrowserPlotServer
+#' @export
+geneBrowserPlotUI <- function(id, contrasts=FALSE) {
+  col_control <- 
+    sidebarPanel(
+                 uiOutput(NS(id, "col_control"))
+                 )
+
   if(contrasts) {
     return(sidebarLayout(col_control,
       mainPanel(
@@ -216,7 +338,7 @@ geneBrowserPlotUI <- function(id, covar, contrasts=FALSE) {
       )))))
   } else {
     return(col_control,
-      mainPanel(plotOutput(NS(id, "countsplot"))))
+      mainPanel(withSpinner(plotOutput(NS(id, "countsplot")))))
   }
 
 }
@@ -266,84 +388,128 @@ geneBrowserPlotUI <- function(id, covar, contrasts=FALSE) {
 #' }
 #' @export
 geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NULL, 
-                                  symbol_col="SYMBOL", description_col="GENENAME") {
-  stopifnot(is.reactive(gene_id))
-  stopifnot(!is.reactive(covar))
-  stopifnot(!is.reactive(exprs))
-  stopifnot(!is.reactive(annot))
-  stopifnot(is.null(annot) || is.data.frame(annot))
-  if(!is.null(annot)) {
-    stopifnot(all(c("PrimaryID", symbol_col, description_col) %in% 
-                  colnames(annot)))
+                                  primary_id="PrimaryID", symbol_col="SYMBOL", description_col="GENENAME") {
+## XXX make checks
+# stopifnot(is.reactive(gene_id))
+# stopifnot(!is.reactive(covar))
+# stopifnot(!is.reactive(exprs))
+# stopifnot(!is.reactive(annot))
+# stopifnot(is.null(annot) || is.data.frame(annot))
+# if(!is.null(annot)) {
+#   stopifnot(all(c(primary_id, symbol_col, description_col) %in% 
+#                 colnames(annot)))
+# }
+
+  if(is.data.frame(covar)) {
+    covar <- list(ID1=covar)
+    exprs <- list(ID1=exprs)
+    annot <- list(ID1=annot)
+    cntr  <- list(ID1=cntr)
   }
+
 
   moduleServer(id, function(input, output, session) {
     disable("save")
 
     ## Save figure as a PDF
-    output$save <- downloadHandler(
-      filename = function() {
-        req(gene_id())
-        ret <- sprintf("expression_profile_%s_covarX_%s_colorBy_%s_groupBy_%s_symbolBy_%s_trellisBy_%s.pdf",
-                       gene_id(), input$covarName, input$colorBy, input$groupBy, input$symbolBy, input$trellisBy)
-        ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
-        return(ret)
-      },
-      content = function(file) {
-        req(gene_id())
-        pdf(file=file, width=8, height=5)
-        g <- .gene_browser_plot(covar, gene_id(), input$covarName, exprs, annot, 
-                           input$groupBy, input$colorBy, input$symbolBy, input$trellisBy)
-        print(g)
-        dev.off()
-      }
-    )
+   output$save <- downloadHandler(
+     filename = function() {
+       .id <- gene_id()$id
+       .ds <- gene_id()$ds
+       ret <- sprintf("expression_profile_ds_%s_%s_covarX_%s_colorBy_%s_groupBy_%s_symbolBy_%s_trellisBy_%s.pdf",
+                      .ds, .id,
+                      input$covarName, input$colorBy, input$groupBy, input$symbolBy, input$trellisBy)
+       ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
+       return(ret)
+     },
+     content = function(file) {
+       .id <- gene_id()$id
+       .ds <- gene_id()$ds
+       pdf(file=file, width=8, height=5)
+       g <- .gene_browser_plot(covar[[.ds]], .id, input$covarName, exprs[[.ds]], annot[[.ds]], 
+                          input$groupBy, input$colorBy, input$symbolBy, input$trellisBy)
+       print(g)
+       dev.off()
+     }
+   )
 
     # Show a turbo card for a gene
     output$geneData <- renderText({
-      req(gene_id())
-      ret <- sprintf("PrimaryID: %s", gene_id())
-      if(!is.null(annot)) {
-        m <- match(gene_id(), annot$PrimaryID)
+      .id <- gene_id()$id
+      .ds <- gene_id()$ds
+
+      ret <- sprintf("%s: %s", primary_id, .id)
+      if(!is.null(annot[[.ds]])) {
+        m <- match(.id, annot[[ .ds ]][[ primary_id ]])
         if(!is.null(symbol_col)) {
           ret <- paste0(ret,
                        sprintf("\nSymbol: %s",
-                               annot[m, ][[symbol_col]])) 
+                               annot[[ .ds ]][m, ][[symbol_col]])) 
         }
         if(!is.null(description_col)) {
           ret <- paste0(ret, 
                         sprintf("\nDescription: %s",
-                                annot[m, ][[description_col]]))
+                                annot[[ .ds ]][m, ][[description_col]]))
         }
       }
       return(ret)
     })
-    if(!is.null(cntr)) {
-      output$contr_sum <- DT::renderDataTable({
-        req(gene_id())
-        cn <- names(cntr)
-        res <- imap_dfr(cntr, ~ .x %>% 
-                        filter(PrimaryID == gene_id()) %>% 
-                    mutate(contrast=.y))
 
-        numcol <- map_lgl(res, is.numeric)
-        res %>% datatable(escape=FALSE, selection='none', options=list(pageLength=5)) %>%
-          formatSignif(columns=colnames(res)[numcol], digits=2)
-      })
-    }
+    observe({
+      .id <- gene_id()$id
+      .ds <- gene_id()$ds
+      if(!is.null(cntr[[ .ds ]])) {
+        output$contr_sum <- DT::renderDataTable({
+          cn <- names(cntr[[ .ds ]])
+          res <- imap_dfr(cntr[[ .ds ]], ~ .x %>% 
+                          filter(.data[[ primary_id ]] == .id) %>% 
+                      mutate(contrast=.y))
+
+          numcol <- map_lgl(res, is.numeric)
+          res %>% datatable(escape=FALSE, selection='none', options=list(pageLength=5)) %>%
+            formatSignif(columns=colnames(res)[numcol], digits=2)
+        })
+    }})
 
     ## Additional information - e.g. correlation coefficient if the
     ## covariate is numeric
     output$addInfo <- renderText({
-      req(gene_id())
-      .gene_browser_info_tab(gene_id(), covar[[input$covarName]], exprs[gene_id(), ])
+      .id <- gene_id()$id
+      .ds <- gene_id()$ds
+      .gene_browser_info_tab(.id, covar[[.id]][[input$covarName]], exprs[[.ds]][ .id, ])
+    })
+
+    dataset <- reactiveVal()
+
+
+    ## isolate change of data set from change of gene id
+    observe({
+      newval <- gene_id()$ds
+      oldval <- isolate({ dataset() })
+
+      if(isTruthy(newval)) {
+        if(!isTruthy(oldval) || newval != oldval) {
+          dataset(newval)
+        }
+      }
+    })
+
+    ## reload the plot interface only if the data set (and covariates)
+    ## changed
+    output$col_control <- renderUI({
+      .ds <- dataset()
+      if(!isTruthy(.ds)) { .ds <- 1 }
+      .dynamic_col_control(id, covar[[.ds]])
     })
 
     ## The actual plot
     output$countsplot <- renderPlot({
-      req(gene_id())
+      .id <- gene_id()$id
+      .ds <- gene_id()$ds
+      if(is.na(.id)) { return(NULL) }
       enable("save")
-      .gene_browser_plot(covar, gene_id(), input$covarName, exprs, annot, 
+      
+      .gene_browser_plot(covar[[.ds]], .id, input$covarName, exprs[[ .ds ]], annot[[ .ds ]], 
                          input$groupBy, input$colorBy, input$symbolBy, input$trellisBy) +
                                     theme(text=element_text(size=input$fontSize))
     })
