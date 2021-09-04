@@ -217,6 +217,7 @@ geneBrowserTableUI <- function(id, cntr_titles) {
 #'        or another specified by the parameter `primary_id`)
 #'        corresponding to the rownames of the contrast data frames
 #' @param id identifier for the namespace of the module
+#' @param primary_id name of the column which holds the primary identifiers
 #' @param cntr_titles named character vector for contrast choices
 #' @param annot_linkout a list; see Details. 
 #' @return reactive value containing the gene ID
@@ -355,6 +356,7 @@ geneBrowserPlotUI <- function(id, contrasts=FALSE) {
 #' change in future to allow for dynamic exchange of data sets.
 #' @param gene_id primary identifier of the gene to show. This must be a
 #'        reactive value
+#' @param primary_id name of the column which holds the primary identifiers
 #' @param exprs expression matrix; row names must correspond to the primary identifiers
 #' @param contrasts (logical) whether or not create an additional panel
 #'        next to the plot which can be used to show detailed contrast
@@ -571,7 +573,7 @@ gene_browser <- function(pip, cntr=NULL, annot=NULL) {
     fluidRow(titlePanel(h1("Gene browser")), class="bg-primary"),
     fluidRow(HTML("<hr>")),
     geneBrowserTableUI("geneTab", cntr_titles),
-    geneBrowserPlotUI("genePlot", covar, contrasts=TRUE)
+    geneBrowserPlotUI("genePlot", contrasts=TRUE)
   )
 
   ## prepare the server

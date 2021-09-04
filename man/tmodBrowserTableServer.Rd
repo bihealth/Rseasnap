@@ -5,20 +5,18 @@
 \alias{tmodBrowserTableServer}
 \title{Shiny Module – tmod results browser table selection}
 \usage{
-tmodBrowserTableUI(id, cntr_titles, dbs, sorting)
+tmodBrowserTableUI(id, cntr_titles)
 
-tmodBrowserTableServer(id, tmod_res)
+tmodBrowserTableServer(id, tmod_res, multilevel = FALSE)
 }
 \arguments{
 \item{id}{identifier for the namespace of the module}
 
 \item{cntr_titles}{possibly named character vector with contrast names}
 
-\item{dbs}{character vector with database names}
-
-\item{sorting}{character vector with sorting options available}
-
 \item{tmod_res}{results of tmod analysis, returned by \code{get_tmod_res}}
+
+\item{multilevel}{if TRUE, the results are grouped in data sets}
 }
 \value{
 reactive value producing a list containing the module id, contrast id, db name and sort type.

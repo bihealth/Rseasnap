@@ -14,11 +14,12 @@ tmodBrowserPlotServer(
   cntr,
   tmod_map = NULL,
   tmod_gl = NULL,
-  annot = NULL
+  annot = NULL,
+  primary_id = "PrimaryID"
 )
 }
 \arguments{
-\item{id}{ID of the shiny module}
+\item{id}{identifier (same as the one passed to geneBrowserTableUI)}
 
 \item{selmod}{a reactive
 value (e.g. returned by tmodBrowserTableServer) and a list containing
@@ -30,10 +31,11 @@ the module id, tmod dataset id, contrast id and sorting type}
 
 \item{tmod_map}{tmod gene set ID mapping returned by \code{get_tmod_mapping()}}
 
-\item{tmod_gl}{tmod gene lists. See details.
-#' @param id identifier (same as the one passed to geneBrowserTableUI)}
+\item{tmod_gl}{tmod gene lists. See details.}
 
 \item{annot}{data frame containing gene annotation}
+
+\item{primary_id}{name of the column which holds the primary identifiers}
 }
 \value{
 returns a reactive value with a selected gene identifier

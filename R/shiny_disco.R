@@ -2,7 +2,10 @@
 #' @export
 discoUI <- function(id, cntr_titles) {
 
-  if(!length(cntr_titles) > 1) {
+  cntr_titles <- .prep_cntr_titles(cntr_titles)
+  cntr_flat   <- unlist(cntr_titles, recursive=FALSE)
+
+  if(!length(cntr_flat) > 1) {
     h4("You need at least two contrasts for this plot")
   } else {
 
@@ -12,7 +15,7 @@ discoUI <- function(id, cntr_titles) {
         fluidRow(selectInput(NS(id, "contrast1"), label = "Contrast 1", 
                              choices = cntr_titles, width="100%"),
         selectInput(NS(id, "contrast2"), label = "Contrast 2", 
-                             choices = cntr_titles, selected=cntr_titles[2], width="100%")),
+                             choices = cntr_titles, selected=cntr_flat[2], width="100%")),
         fluidRow(checkboxInput(NS(id, "autoscale"), "Automatic scale", value=TRUE)),
         fluidRow(sliderInput(NS(id, "min"), "Min", min=-150, max=0, value=-100, width="80%")),
         fluidRow(sliderInput(NS(id, "max"), "Max", min=0, max=150, value=100, width="80%")),
@@ -38,12 +41,12 @@ discoUI <- function(id, cntr_titles) {
   }
 }
 
-.get_gene_df <- function(pid, selcols, annot=NULL) {
+.get_gene_df <- function(pid, selcols, primary_id="PrimaryID", annot=NULL) {
 
   if(is.null(annot)) {
     ret <- data.frame(PrimaryID=pid)
   } else {
-    ret <- annot %>% filter(.data[["PrimaryID"]] %in% pid) %>%
+    ret <- annot %>% filter(.data[[primary_id]] %in% pid) %>%
       select(any_of(selcols))
   }
   return(ret)
@@ -53,6 +56,7 @@ discoUI <- function(id, cntr_titles) {
 #'
 #' Shiny Module – disco plots
 #' @param id identifier of the shiny module (character vector)
+#' @param primary_id name of the contrast data frame column with the primary IDs
 #' @param cntr list of data frames containing the contrast information.
 #'        Data frames must have the columns log2FoldChange and pvalue. Rownames of
 #'        the data frames should be IDs.
@@ -81,7 +85,16 @@ discoUI <- function(id, cntr_titles) {
 #' }
 #' @export
 discoServer <- function(id, cntr, annot=NULL,
-    selcols=c("PrimaryID", "ENTREZ", "SYMBOL")) {
+    selcols=c("PrimaryID", "ENTREZ", "SYMBOL"),
+    primary_id="PrimaryID") {
+
+  if(!is.data.frame(cntr[[1]])) {
+    message("discoServer in multilevel mode")
+  } else {
+    cntr  <- list(ID1=cntr)
+    annot <- list(ID1=annot)
+  }
+
 
   moduleServer(id, function(input, output, session) {
     disable("min")
@@ -90,6 +103,21 @@ discoServer <- function(id, cntr, annot=NULL,
     disco          <- reactiveVal()
     current_genes  <- reactiveVal()
     selected_genes <- reactiveVal()
+
+    contrast1 <- reactiveVal()
+    dataset1  <- reactiveVal()
+    contrast2 <- reactiveVal()
+    dataset2  <- reactiveVal()
+
+    observeEvent(input$contrast1, {
+      contrast1(gsub(".*::", "", input$contrast1))
+      dataset1(gsub("::.*", "", input$contrast1))
+    })
+    observeEvent(input$contrast2, {
+      contrast2(gsub(".*::", "", input$contrast2))
+      dataset2(gsub("::.*", "", input$contrast2))
+    })
+
 
     selcols <- c("PrimaryID", "ENTREZ", "SYMBOL")
 
@@ -108,18 +136,21 @@ discoServer <- function(id, cntr, annot=NULL,
     ## save the disco plot to a PDF file
     output$save <- downloadHandler(
       filename = function() {
-        ret <- sprintf("disco_plot_%s_vs_%s.pdf", input$contrast1, input$contrast2)
+        ret <- sprintf("disco_plot_%s_%s_vs_%s_%s.pdf", 
+                       dataset1(), contrast1(),
+                       dataset2(), contrast2())
         ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
         return(ret)
       },
       content = function(file) {
-        c1 <- input$contrast1
-        c2 <- input$contrast2
         pdf(file=file, width=8, height=8)
         if(input$autoscale) {
-          g <- plot_disco(cntr[[c1]], cntr[[c2]], disco=disco())
+          g <- plot_disco(cntr[[dataset1()]][[contrast1()]], 
+                          cntr[[dataset2()]][[contrast2()]], disco=disco())
         } else {
-          g <- plot_disco(cntr[[c1]], cntr[[c2]], lower=input$min, upper=input$max, disco=disco())
+          g <- plot_disco(cntr[[dataset1()]][[contrast1()]], 
+                          cntr[[dataset2()]][[contrast2()]], 
+                          lower=input$min, upper=input$max, disco=disco())
         }
         print(g)
         dev.off()
@@ -128,14 +159,16 @@ discoServer <- function(id, cntr, annot=NULL,
 
     ## creating the actual plot
     output$discoplot <- renderPlot({
-      c1 <- input$contrast1
-      c2 <- input$contrast2
-      disco(disco_score(cntr[[c1]], cntr[[c2]], by="PrimaryID"))
+      disco(disco_score(cntr[[dataset1()]][[contrast1()]], 
+                        cntr[[dataset2()]][[contrast2()]], by=primary_id))
 
       if(input$autoscale) {
-        g <- plot_disco(cntr[[c1]], cntr[[c2]], disco=disco())
+        g <- plot_disco(cntr[[dataset1()]][[contrast1()]], 
+                        cntr[[dataset2()]][[contrast2()]], disco=disco())
       } else {
-        g <- plot_disco(cntr[[c1]], cntr[[c2]], lower=input$min, upper=input$max, disco=disco())
+        g <- plot_disco(cntr[[dataset1()]][[contrast1()]], 
+                        cntr[[dataset2()]][[contrast2()]], 
+                        lower=input$min, upper=input$max, disco=disco())
       }
       return(g)
     }, width=600, height=600, res=90)
@@ -145,10 +178,10 @@ discoServer <- function(id, cntr, annot=NULL,
     output$sel_genes <- renderTable({
       df <- req(selected_genes())
       #df <- isolate(current_genes())
-      link <- actionButton(NS(id, "gene_id_%s"), label="%s",
-                           onclick=sprintf('Shiny.onInputChange(\"%s-foobar\",  this.id)', id),
+      link <- actionButton(NS(id, "gene_id~%s~%s"), label="%s \U25B6 ",
+                           onclick=sprintf('Shiny.onInputChange(\"%s-genebutton\",  this.id)', id),
                            class = "btn-primary btn-sm")
-      df[["PrimaryID"]] <- sprintf(as.character(link), df$PrimaryID, df$PrimaryID)
+      df[[primary_id]] <- sprintf(as.character(link), dataset1(), df[[primary_id]], df[[primary_id]])
       df
     }, sanitize.text.function=function(x) x)
 
@@ -158,15 +191,15 @@ discoServer <- function(id, cntr, annot=NULL,
 
     ## react to hover over points: enter the close genes into current list
     observeEvent(input$plot_hover, {
-      pid <- disco() %>% nearPoints(input$plot_hover) %>% pull(.data[["PrimaryID"]])
-      ret <- .get_gene_df(pid, selcols, annot)
+      pid <- disco() %>% nearPoints(input$plot_hover) %>% pull(.data[[primary_id]])
+      ret <- .get_gene_df(pid, selcols, primary_id, annot[[dataset1()]])
       current_genes(ret)
     })
 
     ## react to points selected by brush: enter the genes into current list
     observeEvent(input$plot_brush, {
-      pid <- disco() %>% brushedPoints(input$plot_brush) %>% pull(.data[["PrimaryID"]])
-      ret <- .get_gene_df(pid, selcols, annot)
+      pid <- disco() %>% brushedPoints(input$plot_brush) %>% pull(.data[[primary_id]])
+      ret <- .get_gene_df(pid, selcols, primary_id, annot[[dataset1()]])
       selected_genes(ret)
     })
 
@@ -176,9 +209,17 @@ discoServer <- function(id, cntr, annot=NULL,
     })
 
     ## returns a reactive with the gene ID of the clicked gene
-    gene_id <- eventReactive(input$foobar, {
-      gsub(paste0("^", NS(id, "gene_id_")), "", input$foobar)
+    gene_id <- reactiveVal()
+
+    observeEvent(input$genebutton, {
+      ids <- strsplit(input$genebutton, '~')[[1]]
+      gene_id(
+              list(ds=ids[2],
+                   id=ids[3])
+              )
     })
+
+    return(gene_id)
   })
 }
 

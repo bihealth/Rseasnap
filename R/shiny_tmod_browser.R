@@ -1,5 +1,4 @@
-## Construct the results table to display. Specifically, add action button
-## for launching the plot.
+## call .tmod_browser_prepare_res_single for every data set
 .tmod_browser_prepare_res <- function(but, tmod_res) {
   tmod_res <- imap(tmod_res, ~ {
     .tmod_browser_prepare_res_single(.y, but, .x)
@@ -8,6 +7,8 @@
   tmod_res
 }
 
+## Construct the results table to display. Specifically, add action button
+## for launching the plot.
 .tmod_browser_prepare_res_single <- function(ds_id, but, tmod_res) {
   # prepare the tmod res
   tmod_res <- tmod_res %>% imap(~ {
@@ -27,6 +28,7 @@
   return(tmod_res)
 }
 
+
 .tmod_rev_db_map_ids <- function(ids, dbname, tmod_dbs_mapping_obj) {
 
   mp_id <- tmod_dbs_mapping_obj$dbs[dbname]
@@ -45,25 +47,27 @@
 
 
 ## create a datatable with the genes from a gene set
-.tmod_browser_gene_table <- function(but, ds, id, db_name, cntr_name, sort_name, tmod_dbs, cntr, tmod_map) {
+.tmod_browser_gene_table <- function(but, ds, id, db_name, cntr_name, 
+                                     sort_name, tmod_dbs, cntr, tmod_map, primary_id) {
 
   db <- tmod_dbs[[db_name]][["dbobj"]]
   genes <- db[["MODULES2GENES"]][[id]]
   genes_pid <- .tmod_rev_db_map_ids(ids=genes, dbname=db_name, tmod_dbs_mapping_obj=tmod_map)
 
-  ret <- cntr[[cntr_name]] %>% filter(.data[["PrimaryID"]] %in% genes_pid)
-  ret <- ret %>% mutate('>' = sprintf(but, ds, .data[["PrimaryID"]])) %>% relocate(all_of(">"), .before=1) %>%
+  ret <- cntr[[cntr_name]] %>% filter(.data[[primary_id]] %in% genes_pid)
+  ret <- ret %>% mutate('>' = sprintf(but, ds, .data[[primary_id]])) %>% relocate(all_of(">"), .before=1) %>%
     arrange(.data[["pvalue"]])
+
+  num_cols <- colnames(ret)[ map_lgl(ret, is.numeric) ]
 
   datatable(ret, escape=FALSE, selection='none',
                 options=list(pageLength=5, dom="Bfrtip", scrollX=TRUE, buttons=c("copy", "csv", "excel"))) %>%
-        formatSignif(columns=intersect(colnames(ret),
-                                       c("baseMean", "log2FoldChange", "pvalue", "padj")), digits=2)
+        formatSignif(columns=num_cols, digits=2)
   
 }
 
 .plot_evidence <- function(mod_id, cntr_id, db_id, sort_id, cntr, tmod_dbs,
-                           tmod_gl=NULL, tmod_map=NULL, annot=NULL) {
+                           tmod_gl=NULL, tmod_map=NULL, annot=NULL, primary_id) {
 
   mset <- tmod_dbs[[db_id]][["dbobj"]]
   cntr <- cntr[[ cntr_id ]]
@@ -72,14 +76,14 @@
     stop("Parameter `cntr` must have columns log2FoldChange, pvalue and padj")
   }
 
-  if(!"PrimaryID" %in% colnames(cntr)) {
-    cntr[["PrimaryID"]] <- rownames(cntr)
+  if(!primary_id %in% colnames(cntr)) {
+    cntr[[primary_id]] <- rownames(cntr)
   }
 
   if(is.null(tmod_gl)) {
     ## create an ad hoc list
     cntr <- cntr[ order(cntr$pvalue), ]
-    gl <- tmod_map$maps[[ tmod_map$dbs[[ db_id ]] ]][ cntr[["PrimaryID"]] ]
+    gl <- tmod_map$maps[[ tmod_map$dbs[[ db_id ]] ]][ cntr[[primary_id]] ]
   } else {
     gl <- tmod_gl[[cntr_id]][[db_id]][[sort_id]]
   }
@@ -87,7 +91,7 @@
   symbols <- names(gl)
 
   if("SYMBOL" %in% colnames(annot)) {
-    symbols <- annot[["SYMBOL"]][ match(symbols, annot[["PrimaryID"]]) ]
+    symbols <- annot[["SYMBOL"]][ match(symbols, annot[[primary_id]]) ]
   }
 
   names(symbols) <- names(gl)
@@ -106,7 +110,7 @@
   
   ## now for some color
   # make sure that cntr is in the same order as gl
-  cntr <- cntr[ match(names(gl), cntr[["PrimaryID"]]), ]
+  cntr <- cntr[ match(names(gl), cntr[[primary_id]]), ]
 
   p <- cntr$padj
   l <- cntr$log2FoldChange
@@ -203,13 +207,15 @@ tmodBrowserPlotUI <- function(id) {
 #' @param tmod_dbs tmod gene set databases returned by `get_tmod_dbs()`
 #' @param tmod_map tmod gene set ID mapping returned by `get_tmod_mapping()`
 #' @param tmod_gl tmod gene lists. See details.
-#' #' @param id identifier (same as the one passed to geneBrowserTableUI)
+#' @param id identifier (same as the one passed to geneBrowserTableUI)
+#' @param primary_id name of the column which holds the primary identifiers
 #' @param cntr list of contrast results returned by `get_contrasts()`
 #' @param annot data frame containing gene annotation 
 #' @return returns a reactive value with a selected gene identifier
 #' @importFrom shinyBS popify
 #' @export
-tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmod_gl=NULL, annot=NULL) {
+tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmod_gl=NULL, annot=NULL, 
+                                  primary_id="PrimaryID") {
 
   stopifnot(!is.null(tmod_gl) || !is.null(tmod_map))
 
@@ -236,7 +242,7 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
     gene_id <- reactiveVal(list(ds=NA, id=NA))
 
     observeEvent(input$gene_select_button, {
-      .ids <- strsplit(input$select_button, '~')[[1]]
+      .ids <- strsplit(input$gene_select_button, '~')[[1]]
       gene_id(list(ds=.ids[2], id=.ids[3]))
     })
 
@@ -253,7 +259,7 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
       ds <- mod$ds
       .plot_evidence(mod_id=mod$id, cntr_id=mod$cntr, db_id=mod$db, sort_id=mod$sort, 
                      cntr=cntr[[ds]], tmod_dbs=tmod_dbs[[ds]], tmod_gl=tmod_gl[[ds]], 
-                     tmod_map=tmod_map[[ds]], annot=annot[[ds]])
+                     tmod_map=tmod_map[[ds]], annot=annot[[ds]], primary_id)
     }, width=800, height=600)
 
 
@@ -270,7 +276,7 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
       ds <- mod$ds
       .tmod_browser_gene_table(as.character(gene.but), ds,
                                     mod$id, mod$db, mod$cntr, mod$cntr, 
-                                    tmod_dbs[[ds]], cntr[[ds]], tmod_map[[ds]])
+                                    tmod_dbs[[ds]], cntr[[ds]], tmod_map[[ds]], primary_id)
     })
     
 
@@ -280,7 +286,7 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
       filename = function() {
         mod <- req(selmod())
         if(is.null(mod$id)) { return(NULL) }
-        ret <- sprintf("evidence_plot_%s_%s_%s.pdf", mod$db, mod$cntr, mod$id)
+        ret <- sprintf("evidence_plot_%s_%s_%s_%s.pdf", mod$ds, mod$db, mod$cntr, mod$id)
         return(ret)
       },
       content = function(file) {
@@ -289,8 +295,11 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
         pdf(file=file, width=8, height=5)
         title <- sprintf("%s / %s\nContrast: %s / %s", 
                          mod$id, mod$db, mod$cntr, mod$sort)
+
+        ds <- mod$ds
         .plot_evidence(mod_id=mod$id, cntr_id=mod$cntr, db_id=mod$db, sort_id=mod$sort, 
-                     cntr=cntr, tmod_dbs=tmod_dbs, tmod_gl=tmod_gl, tmod_map=tmod_map, annot=annot)
+                     cntr=cntr[[ds]], tmod_dbs=tmod_dbs[[ds]], tmod_gl=tmod_gl[[ds]], 
+                     tmod_map=tmod_map[[ds]], annot=annot[[ds]], primary_id)
         dev.off()
       }
     )
@@ -338,8 +347,6 @@ tmodBrowserTableUI <- function(id, cntr_titles) {
 #' Shiny Module – tmod results browser table selection
 #' @param tmod_res results of tmod analysis, returned by `get_tmod_res`
 #' @param cntr_titles possibly named character vector with contrast names
-#' @param dbs character vector with database names
-#' @param sorting character vector with sorting options available
 #' @param id identifier for the namespace of the module
 #' @param multilevel if TRUE, the results are grouped in data sets
 #' @return reactive value producing a list containing the module id, contrast id, db name and sort type.
@@ -412,9 +419,7 @@ tmodBrowserTableServer <- function(id, tmod_res, multilevel=FALSE) {
     selmod <- reactiveVal()
 
     observeEvent(input$select_button, {
-      message("button pressed")
       tmp <- unlist(strsplit(gsub("^go_", "", input$select_button), "-!-"))
-      message(tmp)
       selmod(list(ds=tmp[1], id=tmp[2], cntr=tmp[3], db=tmp[4], sort=tmp[5]))
     })
 
@@ -495,7 +500,7 @@ tmod_browser <- function(pip, tmod_dbs=NULL, tmod_res=NULL, annot=NULL) {
     theme = bs_theme(bootswatch = "sandstone"),
     fluidRow(titlePanel(h1("tmod browser")), class="bg-primary"),
     fluidRow(HTML("<hr>")),
-    tmodBrowserTableUI("tmod", cntr_titles, dbs, sorting),
+    tmodBrowserTableUI("tmod", cntr_titles),
     tmodBrowserPlotUI("tmodPlot"))
     
   server <- function(input, output, session) {

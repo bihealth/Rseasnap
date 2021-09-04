@@ -7,19 +7,29 @@
 \usage{
 geneBrowserTableUI(id, cntr_titles)
 
-geneBrowserTableServer(id, cntr, annot, annot_linkout = NULL)
+geneBrowserTableServer(
+  id,
+  cntr,
+  annot,
+  annot_linkout = NULL,
+  primary_id = "PrimaryID"
+)
 }
 \arguments{
 \item{id}{identifier for the namespace of the module}
 
 \item{cntr_titles}{named character vector for contrast choices}
 
-\item{cntr}{a list of data frames containing the DE analysis results}
+\item{cntr}{a list of data frames containing the DE analysis results, or
+a list of lists of data frames}
 
-\item{annot}{annotation data frame containing column 'PrimaryID'
+\item{annot}{annotation data frame containing column 'PrimaryID' (
+or another specified by the parameter \code{primary_id})
 corresponding to the rownames of the contrast data frames}
 
 \item{annot_linkout}{a list; see Details.}
+
+\item{primary_id}{name of the column which holds the primary identifiers}
 }
 \value{
 reactive value containing the gene ID
@@ -28,6 +38,22 @@ reactive value containing the gene ID
 Shiny Module – gene browser table selection
 }
 \details{
+The basic data set structure that this module takes is a named list of data
+frames. These data frames will be shown in the browser when the specific
+contrast (corresponding to a name in the list) is selected from the
+configuration sidebar. The data frames \emph{must} contain a column called
+"PrimaryID" (this identifier can be changed with the parameter
+\code{primary_id}). This is necessary in order to link the table rows with
+e.g. plotting genes with \code{geneBrowserPlotServer}.
+
+Log2 fold changes must be stored in a column called
+"log2FoldChange", and p-values in a column called "padj". These are the
+default column names returned by DESeq2.
+
+Alternatively, tmodBrowserTableServer takes a list of lists of data
+frames; that is, it allows to group the results of differential gene
+analysis.
+
 The linkout feature (parameter \code{annot_linkout}) allows to define how the
 different columns from the annotation data frame are represented as
 linkouts to external data bases.

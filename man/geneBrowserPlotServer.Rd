@@ -5,7 +5,7 @@
 \alias{geneBrowserPlotServer}
 \title{Shiny Module – gene browser expression profile plot}
 \usage{
-geneBrowserPlotUI(id, covar, contrasts = FALSE)
+geneBrowserPlotUI(id, contrasts = FALSE)
 
 geneBrowserPlotServer(
   id,
@@ -14,14 +14,13 @@ geneBrowserPlotServer(
   exprs,
   annot = NULL,
   cntr = NULL,
+  primary_id = "PrimaryID",
   symbol_col = "SYMBOL",
   description_col = "GENENAME"
 )
 }
 \arguments{
 \item{id}{identifier (same as the one passed to geneBrowserTableUI)}
-
-\item{covar}{data frame with all covariates}
 
 \item{contrasts}{(logical) whether or not create an additional panel
 next to the plot which can be used to show detailed contrast
@@ -30,12 +29,16 @@ information for a gene}
 \item{gene_id}{primary identifier of the gene to show. This must be a
 reactive value}
 
+\item{covar}{data frame with all covariates}
+
 \item{exprs}{expression matrix; row names must correspond to the primary identifiers}
 
 \item{annot}{(optional) annotation data frame containing column 'PrimaryID'
 corresponding to the rownames of the contrast data frames}
 
 \item{cntr}{(optional) list of contrasts}
+
+\item{primary_id}{name of the column which holds the primary identifiers}
 
 \item{symbol_col}{name of the column in \code{annot} which contains the gene
 symbols; use NULL if no such column}

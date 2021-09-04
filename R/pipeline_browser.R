@@ -108,10 +108,10 @@ helpUI <- function() {
            collapsible=TRUE,
            solidHeader=TRUE, tmodBrowserPlotUI("tmodP"))
     )
-#    t3 <- tabItem("disco",
-#       box(title="Discordance / concordance plots", width=12, status="primary",
-#       height="800px", solidHeader=TRUE, discoUI("disco", cntr_titles)),
-#       )
+    t3 <- tabItem("disco",
+       box(title="Discordance / concordance plots", width=12, status="primary",
+       height="800px", solidHeader=TRUE, discoUI("disco", cntr_titles)),
+       )
 #    t4 <- tabItem("panel_plot",
 #       box(title="Panel plot", width=12, status="primary",
 #           solidHeader=TRUE, tmodPanelPlotUI("panelP", dbs, sorting)))
@@ -126,7 +126,7 @@ helpUI <- function() {
       t7 <- tabItem("help", helpUI())
   dashboardBody(
     tabItems(
-             t1, t2,# t3, t4, t5, 
+             t1, t2, t3, #t4, t5, 
              t6, t7
     ),
     style="min-height:1500px;"
@@ -196,7 +196,7 @@ helpUI <- function() {
   ret[["annot_linkout"]] <- .prep_annot_linkout(ret[["annot"]], ret[["config"]])
 
   ret[["dbs"]]     <- names(tmod_dbs)
-  ret[["sorting"]] <- config$tmod$sort_by
+  ret[["sorting"]] <- ret[["config"]]$tmod$sort_by
 
   ret[["rld"]]     <- get_object(.pip, step="DESeq2", extension="rld.blind.rds")
   ret[["rld"]]     <- ret[["rld"]]@assays@data@listData[[1]]
@@ -232,6 +232,7 @@ helpUI <- function() {
 #' @importFrom shiny addResourcePath
 #' @importFrom shinydashboard dashboardPage dashboardBody dashboardSidebar dashboardHeader
 #' @importFrom shinydashboard box sidebarMenu tabItem tabItems updateTabItems menuItem
+#' @importFrom methods is
 #' @examples
 #' if(interactive()) {
 #'   example_dir <- system.file("extdata/example_pipeline", package="Rseasnap")
@@ -297,7 +298,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
                                       tmod_map=data[["tmod_map"]], 
                                       tmod_gl =data[["tmod_gl"]], 
                                       annot   =data[["annot"]])
-#    gene_id2 <- discoServer("disco", cntr, annot)
+    gene_id2 <- discoServer("disco", data[["cntr"]], data[["annot"]])
     mod_id1  <- tmodBrowserTableServer("tmodT", data[["tmod_res"]], multilevel=TRUE)
 #   mod_id2  <- tmodPanelPlotServer("panelP", cntr    =data[["cntr"]], 
 #                                             tmod_res=data[["tmod_res"]],
@@ -317,17 +318,17 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
 #    })
 
     ## combine events selecting a gene from gene browser and from disco
-#    observeEvent(gene_id1(), { gene_id(gene_id1()) })
-#    observeEvent(gene_id2(), { 
-#      updateTabItems(session, "navid", "gene_browser")
-#      gene_id(gene_id2())
-#    })
-#    observeEvent(gene_id3(), { 
-#      updateTabItems(session, "navid", "gene_browser")
-#      gene_id(gene_id3())
-#    })
+    observeEvent(gene_id1(), { gene_id(gene_id1()) })
+    observeEvent(gene_id2(), { 
+      updateTabItems(session, "navid", "gene_browser")
+      gene_id(gene_id2())
+    })
+    observeEvent(gene_id3(), { 
+      updateTabItems(session, "navid", "gene_browser")
+      gene_id(gene_id3())
+    })
 
-    geneBrowserPlotServer("geneP", gene_id1, covar=data[["covar"]], 
+    geneBrowserPlotServer("geneP", gene_id, covar=data[["covar"]], 
                           exprs=data[["rld"]], annot=data[["annot"]], cntr=data[["cntr"]])
   }
 
