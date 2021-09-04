@@ -222,11 +222,11 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
   if(!is.data.frame(annot)) {
     message("tmodBrowserPlotServer: running in multilevel mode")
   } else {
-    tmod_dbs <- list(ID1=tmod_dbs)
-    cntr     <- list(ID1=cntr)
-    tmod_map <- list(ID1=tmod_map)
-    tmod_gl  <- list(ID1=tmod_gl)
-    annot    <- list(ID1=annot)
+    tmod_dbs <- list(default=tmod_dbs)
+    cntr     <- list(default=cntr)
+    tmod_map <- list(default=tmod_map)
+    tmod_gl  <- list(default=tmod_gl)
+    annot    <- list(default=annot)
   }
     
   moduleServer(id, function(input, output, session) {
@@ -354,7 +354,7 @@ tmodBrowserTableUI <- function(id, cntr_titles) {
 tmodBrowserTableServer <- function(id, tmod_res, multilevel=FALSE) {
 
   if(!multilevel) {
-    tmod_res <- list(ID1=tmod_res)
+    tmod_res <- list(default=tmod_res)
   }
 
   but <- actionButton("go_%s-!-%s-!-%s-!-%s-!-%s", label=" \U25B6 ", 

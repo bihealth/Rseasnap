@@ -91,8 +91,8 @@ discoServer <- function(id, cntr, annot=NULL,
   if(!is.data.frame(cntr[[1]])) {
     message("discoServer in multilevel mode")
   } else {
-    cntr  <- list(ID1=cntr)
-    annot <- list(ID1=annot)
+    cntr  <- list(default=cntr)
+    annot <- list(default=annot)
   }
 
 

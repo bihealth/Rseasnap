@@ -252,12 +252,12 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
   ## pip can be a pipeline or a list of pipelines. In this first case, we
   ## change everything into a list.
   if(is(pip, "seasnap_DE_pipeline")) {
-    pip <- list(ID1=pip)
+    pip <- list(default=pip)
 
-    if(!is.null(annot))    { annot    <- list(ID1=annot)    }
-    if(!is.null(cntr))     { cntr     <- list(ID1=cntr)     }
-    if(!is.null(tmod_res)) { tmod_res <- list(ID1=tmod_res) }
-    if(!is.null(tmod_dbs)) { tmod_dbs <- list(ID1=tmod_dbs) }
+    if(!is.null(annot))    { annot    <- list(default=annot)    }
+    if(!is.null(cntr))     { cntr     <- list(default=cntr)     }
+    if(!is.null(tmod_res)) { tmod_res <- list(default=tmod_res) }
+    if(!is.null(tmod_dbs)) { tmod_dbs <- list(default=tmod_dbs) }
   }
 
   data <- .prepare_data(pip, annot, cntr, tmod_res, tmod_dbs, primary_id)

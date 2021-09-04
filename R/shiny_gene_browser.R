@@ -104,7 +104,7 @@
     }
   } else {
     tmp <- cntr_titles
-    cntr_titles <- paste0("ID1::", tmp)
+    cntr_titles <- paste0("default::", tmp)
     names(cntr_titles) <- names(tmp)
   }
 
@@ -230,9 +230,9 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL,
                 annot_linkout=annot_linkout, primary_id=primary_id)
 
   if(!multilevel) {
-    cntr <- list(ID1=cntr)
-    annot <- list(ID1=annot)
-    annot_linkout=list(ID1=annot_linkout)
+    cntr <- list(default=cntr)
+    annot <- list(default=annot)
+    annot_linkout=list(default=annot_linkout)
   }
 
   moduleServer(id, function(input, output, session) {
@@ -403,10 +403,10 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
 # }
 
   if(is.data.frame(covar)) {
-    covar <- list(ID1=covar)
-    exprs <- list(ID1=exprs)
-    annot <- list(ID1=annot)
-    cntr  <- list(ID1=cntr)
+    covar <- list(default=covar)
+    exprs <- list(default=exprs)
+    annot <- list(default=annot)
+    cntr  <- list(default=cntr)
   }
 
 
