@@ -413,59 +413,74 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
   moduleServer(id, function(input, output, session) {
     disable("save")
 
+    ds   <- reactiveVal()
+    g_id <- reactiveVal()
+
+    observe({
+      ds(gene_id()$ds)
+      g_id(gene_id()$id)
+    })
+
     ## Save figure as a PDF
-   output$save <- downloadHandler(
-     filename = function() {
-       .id <- gene_id()$id
-       .ds <- gene_id()$ds
-       ret <- sprintf("expression_profile_ds_%s_%s_covarX_%s_colorBy_%s_groupBy_%s_symbolBy_%s_trellisBy_%s.pdf",
-                      .ds, .id,
-                      input$covarName, input$colorBy, input$groupBy, input$symbolBy, input$trellisBy)
-       ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
-       return(ret)
-     },
-     content = function(file) {
-       .id <- gene_id()$id
-       .ds <- gene_id()$ds
-       pdf(file=file, width=8, height=5)
-       g <- .gene_browser_plot(covar[[.ds]], .id, input$covarName, exprs[[.ds]], annot[[.ds]], 
-                          input$groupBy, input$colorBy, input$symbolBy, input$trellisBy)
-       print(g)
-       dev.off()
-     }
-   )
+    output$save <- downloadHandler(
+      filename = function() {
+        .id <- g_id()
+        .ds <- ds()
+        ret <- sprintf("expression_profile_ds_%s_%s_covarX_%s_colorBy_%s_groupBy_%s_symbolBy_%s_trellisBy_%s.pdf",
+                       .ds, .id,
+                       input$covarName, input$colorBy, input$groupBy, input$symbolBy, input$trellisBy)
+        ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
+        return(ret)
+      },
+      content = function(file) {
+        pdf(file=file, width=8, height=5)
+        g <- .gene_browser_plot(covar[[ ds() ]], g_id(), 
+                                input$covarName, 
+                                exprs[[ ds() ]], 
+                                annot[[ ds() ]], 
+                           input$groupBy, input$colorBy, input$symbolBy, input$trellisBy)
+        print(g)
+        dev.off()
+      }
+    )
 
     # Show a turbo card for a gene
     output$geneData <- renderText({
-      .id <- gene_id()$id
-      .ds <- gene_id()$ds
 
-      ret <- sprintf("%s: %s", primary_id, .id)
-      if(!is.null(annot[[.ds]])) {
-        m <- match(.id, annot[[ .ds ]][[ primary_id ]])
+      ret <- sprintf("%s: %s", primary_id, g_id())
+      if(!is.null(annot[[ ds() ]])) {
+
+        m <- match(g_id(), annot[[  ds()  ]][[ primary_id ]])
+
         if(!is.null(symbol_col)) {
           ret <- paste0(ret,
                        sprintf("\nSymbol: %s",
-                               annot[[ .ds ]][m, ][[symbol_col]])) 
+                               annot[[  ds()  ]][m, ][[symbol_col]])) 
         }
         if(!is.null(description_col)) {
           ret <- paste0(ret, 
                         sprintf("\nDescription: %s",
-                                annot[[ .ds ]][m, ][[description_col]]))
+                                annot[[  ds()  ]][m, ][[description_col]]))
         }
       }
       return(ret)
     })
 
+    ## summary contrasts table
     observe({
-      .id <- gene_id()$id
-      .ds <- gene_id()$ds
-      if(!is.null(cntr[[ .ds ]])) {
+      if(!is.null(cntr[[ ds() ]])) {
         output$contr_sum <- DT::renderDataTable({
-          cn <- names(cntr[[ .ds ]])
-          res <- imap_dfr(cntr[[ .ds ]], ~ .x %>% 
-                          filter(.data[[ primary_id ]] == .id) %>% 
+          cn <- names(cntr[[ ds() ]])
+          res <- imap_dfr(cntr[[ ds() ]], ~ .x %>% 
+                          filter(.data[[ primary_id ]] == g_id()) %>% 
                       mutate(contrast=.y))
+          res <- imap_dfr(cntr, ~ {
+                            .ds <- .y
+                            imap_dfr(.x, ~ {
+                                       .x %>% filter(.data[[ primary_id ]] == g_id()) %>%
+                                         mutate("Data set"=.ds, Contrast=.y)
+                            })
+                      })
 
           numcol <- map_lgl(res, is.numeric)
           res %>% datatable(escape=FALSE, selection='none', options=list(pageLength=5)) %>%
@@ -476,42 +491,23 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
     ## Additional information - e.g. correlation coefficient if the
     ## covariate is numeric
     output$addInfo <- renderText({
-      .id <- gene_id()$id
-      .ds <- gene_id()$ds
-      .gene_browser_info_tab(.id, covar[[.id]][[input$covarName]], exprs[[.ds]][ .id, ])
-    })
-
-    dataset <- reactiveVal()
-
-
-    ## isolate change of data set from change of gene id
-    observe({
-      newval <- gene_id()$ds
-      oldval <- isolate({ dataset() })
-
-      if(isTruthy(newval)) {
-        if(!isTruthy(oldval) || newval != oldval) {
-          dataset(newval)
-        }
-      }
+      .gene_browser_info_tab(g_id(), covar[[g_id()]][[input$covarName]], exprs[[ds()]][ g_id(), ])
     })
 
     ## reload the plot interface only if the data set (and covariates)
     ## changed
     output$col_control <- renderUI({
-      .ds <- dataset()
+      .ds <- ds()
       if(!isTruthy(.ds)) { .ds <- 1 }
       .dynamic_col_control(id, covar[[.ds]])
     })
 
     ## The actual plot
     output$countsplot <- renderPlot({
-      .id <- gene_id()$id
-      .ds <- gene_id()$ds
-      if(is.na(.id)) { return(NULL) }
+      if(is.na(g_id())) { return(NULL) }
       enable("save")
       
-      .gene_browser_plot(covar[[.ds]], .id, input$covarName, exprs[[ .ds ]], annot[[ .ds ]], 
+      .gene_browser_plot(covar[[ds()]], g_id(), input$covarName, exprs[[ ds() ]], annot[[ ds() ]], 
                          input$groupBy, input$colorBy, input$symbolBy, input$trellisBy) +
                                     theme(text=element_text(size=input$fontSize))
     })
