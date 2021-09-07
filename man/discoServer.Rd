@@ -11,7 +11,8 @@ discoServer(
   id,
   cntr,
   annot = NULL,
-  selcols = c("PrimaryID", "ENTREZ", "SYMBOL")
+  selcols = c("PrimaryID", "ENTREZ", "SYMBOL"),
+  primary_id = "PrimaryID"
 )
 }
 \arguments{
@@ -30,6 +31,8 @@ frames in the \code{cntr} list.}
 
 \item{selcols}{which column in the gene table when genes are selected
 from the plot}
+
+\item{primary_id}{name of the contrast data frame column with the primary IDs}
 }
 \value{
 Returns a reactive expression returning the ID of the activated gene

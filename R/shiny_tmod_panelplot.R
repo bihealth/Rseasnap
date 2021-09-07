@@ -27,6 +27,7 @@
 #' @param label_angle The angle at which column labels are shown
 #' @importFrom tidyr pivot_longer pivot_wider everything
 #' @importFrom tibble rownames_to_column
+#' @importFrom purrr flatten
 #' @export
 gg_panelplot <- function(res, pie, auc_thr=.5, q_thr=.05,
                          filter_row_q=.01,
@@ -116,12 +117,19 @@ gg_panelplot <- function(res, pie, auc_thr=.5, q_thr=.05,
     
 }
 
+mp <- function(x) {
+  message(paste(x, collapse=", "))
+}
 
+mf <- function(x, ...) {
+  message(sprintf(x, ...))
+}
 
 #' @importFrom shinycssloaders withSpinner
 #' @rdname tmodPanelPlotServer
 #' @export
-tmodPanelPlotUI <- function(id, dbs, sorting) {
+tmodPanelPlotUI <- function(id, ds_titles=NULL) {
+  mp(ds_titles)
 
   ttip <- list(
 
@@ -132,18 +140,34 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
                      "least the AUC threshold."),
     filter_pval=paste("Filter the gene sets by setting a maximum p-value threshold on the minimum p value",
                      "in any of the contrasts. In other words, remove rows in which no test achieves ",
-                     "the p-value threshold.")
+                     "the p-value threshold."),
 
+    database=paste("Different gene set databases can be used for enrichment analysis.",
+                   "Examples include KEGG, the pathways from Kyoto Encyclopaedia of Genes and",
+                   "genomes, GO - gene ontology, Hallmark - 50 predefined gene sets from the",
+                   "MSigDB and tmod, the transcritpional modules included in the tmod package."),
+
+    sorting_order=paste("Enrichment analysis starts with a sorted list of genes. Depending on ",
+                   "the details of the analysis, several approaches to sorting can be used.",
+                   "By default, the genes are ordered by the p-value.")
     )
+
+    if(is.null(ds_titles)) {
+      tmp <- ""
+    } else {
+      tmp <- fluidRow(selectInput(NS(id, "dataset"), label="Dataset", choices=ds_titles, width="100%"))
+    }
 
     sidebarLayout(
       sidebarPanel(
+        tmp,
         fluidRow(
         column(
-           fluidRow(selectInput(NS(id, "db"),        label="Database", choices=dbs,         width="100%"),
-                    bsTooltip(NS(id, "db"), "Gene set database to be shown")),
-           fluidRow(selectInput(NS(id, "sort"),      label="Sorting",  choices=sorting,     width="100%"),
-                    bsTooltip(NS(id, "sort"), "Sorting order for the enrichment")),
+           fluidRow(popify(uiOutput(NS(id, "db_field")),
+                    "Gene set database to be shown", ttip$database)),
+           fluidRow(popify(uiOutput(NS(id, "sort_field")),
+                           "Sorting order for te enrichment", ttip$sorting_order)),
+                    #selectInput(NS(id, "sort"),      label="Sorting",  choices=sorting,     width="100%"),
            fluidRow(popify(numericInput(NS(id, "gene_pval"), label="P-value significance threshold for genes", 
                                  value = 0.05, min=0, step=.01, width="100%"),
                     "P-value significance threshold for genes", ttip$gene_pval)),
@@ -171,7 +195,7 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
                                           Vertical=90,
                                           Horizontal=0),
                                  width="100%"),
-                bsTooltip(NS(id, "figure_size"), 
+                bsTooltip(NS(id, "label_angle"), 
                   "How the contrast label should be displayed on the image.")),
             
            fluidRow(numericInput(NS(id, "filter_auc"),  label="Filter by AUC (per row)",  value=0.5,
@@ -219,8 +243,6 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
 #*  * lowest level is a data frame containing the actual result for the
 #*    given contrast, database and sorting.
 #' @param id Module ID
-#' @param dbs named character vector with the IDs and names of the gene set databases 
-#' @param sorting named character vector with the sorting types
 #' @param tmod_map mapping between the PrimaryIDs from the contrasts and
 #' the gene IDs from the gene set databases.
 #' @param cntr list of data frames with the results of differential
@@ -230,6 +252,8 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
 #' @param tmod_res list of tmod gene set enrichment analysis
 #' results. See Details.
 #' @param tmod_dbs list of 
+#' @param ds_titles if there are multiple data sets, this character vector
+#'        defines what they are to show an approppriate selector in the UI
 #' @return Returns a reactive value which is a list with elements
 #' `contrast` and `id`.
 #' @importFrom shiny observe selectizeInput
@@ -237,66 +261,153 @@ tmodPanelPlotUI <- function(id, dbs, sorting) {
 #' @export
 tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NULL) {
 
+  if(!is.data.frame(cntr[[1]])) {
+    message("tmodPanelPlotServer: cntr[[1]] is not a data frame, assuming multilevel mode")
+  } else {
+    cntr=list(default=cntr)
+    tmod_res=list(default=tmod_res)
+    tmod_dbs=list(default=tmod_dbs)
+    tmod_map=list(default=tmod_map)
+    annot=list(default=annot)
+  }
+
+  ds_ids       <- names(cntr)
+  is_single_ds <- length(ds_ids) == 1L
+
+  ## in this module, we use labels which combine the dataset and the
+  ## contrast ID, because the representation is not hierarchical, but flat
+  if(is_single_ds) {
+    ds_label_map <- unlist(imap(cntr, ~ rep(.y, length(.x))))
+    names(ds_label_map) <- names(cntr_label_map) <- 
+                             cntr_label_map <- names(cntr[[1]])
+  } else {
+    cntr_label_map <- unlist(map(cntr, names))
+    names(cntr_label_map) <- unlist(imap(cntr, ~ {
+                                  paste0(.y, ': ', names(.x))
+              }))
+    ds_label_map <- unlist(imap(cntr, ~ rep(.y, length(.x))))
+    names(ds_label_map) <- names(cntr_label_map)
+
+    cntr <- imap(cntr, ~ {
+                   names(.x) <- paste0(.y, ': ', names(.x))
+                   .x
+    })
+  }
+    
 	moduleServer(id, function(input, output, session) {
     message("Launching tmod panelplot server")
     disable("save")
 
-    plot_df   <- reactiveVal()
     selection <- reactiveVal()
+
+    output$db_field <- renderUI({
+      if(is_single_ds) { .ds <- ds_ids[1] } else { .ds <- input$dataset }
+      dbs <- names(tmod_res[[.ds]][[1]])
+      selectInput(NS(id, "db"),  label="Database", choices=dbs, width="100%")
+    })
+
+    output$sort_field <- renderUI({
+      if(is_single_ds) { .ds <- ds_ids[1] } else { .ds <- input$dataset }
+      sorting <- names(tmod_res[[.ds]][[1]][[1]])
+      selectInput(NS(id, "sort"),  label="Sorting", choices=sorting, width="100%")
+    })
+
     selection(list(click=0))
 
-    ## Save figure as a PDF
-    output$save <- downloadHandler(
-      filename = function() {
-        req(res())
-        ret <- sprintf("tmod_panel_plot_%s_%s.pdf",
-                       input$db, input$sort)
-        ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
-        return(ret)
-      },
-      content = function(file) {
-        req(res())
-        pdf(file=file, width=fig_width() / 75, height=fig_height() / 75)
-        gg_panelplot(res(), pie=pie(), 
+   ## Save figure as a PDF
+   output$save <- downloadHandler(
+     filename = function() {
+       req(res())
+       ret <- sprintf("tmod_panel_plot_%s_%s.pdf",
+                      input$db, input$sort)
+       ret <- gsub("[^0-9a-zA-Z_.-]", "", ret)
+       return(ret)
+     },
+     content = function(file) {
+       req(res())
+
+      .pie <- pie()
+      if(is.null(.pie)) { return(NULL) }
+
+      .res <- flatten(res())
+
+      browser()
+      mf("Saving to file %s", file)
+      pdf(file=file, width=fig_width() / 75, height=fig_height() / 75)
+      g <- gg_panelplot(.res, pie=.pie, 
                      filter_row_auc=input$filter_auc,
                      filter_row_q=input$filter_pval,
                      label_angle=input$label_angle) + 
                                    theme(text=element_text(size=input$font_size))
-        dev.off()
-      }
-    )
+
+        print(g)
+       dev.off()
+       message("returning")
+     }
+   )
 
     output$hover_pos <- renderText({
 
       if(is.null(input$plot_hover)) { return("Hover over the plot to identify the gene sets.") }
 
-      contrast <- input$plot_hover$panelvar1
+      contrast <- cntr_label_map[ input$plot_hover$panelvar1 ]
+      dataset  <-   ds_label_map[ input$plot_hover$panelvar1 ]
       id       <- unlist(input$plot_hover$domain$discrete_limits$y)[
                                                         round(input$plot_hover$y) ]
 
-      sprintf("Contrast %s, ID %s. Click to view in tmod browser panel.", 
+      if(dataset != "default") {
+        ret <- sprintf("Dataset %s, Contrast %s, ID %s. Click to view in tmod browser panel.", 
+              dataset, contrast, id)
+      } else {
+        ret <- sprintf("Contrast %s, ID %s. Click to view in tmod browser panel.", 
               contrast, id)
+      }
     })
 
 
+    ## prepare the list of tmod results to display
     res <- reactive({
-      map(tmod_res, ~ .x[[input$db]][[input$sort]])
+      if(!(isTruthy(input$db) && isTruthy(input$sort))) { return(NULL) }
+
+      ret <- imap(tmod_res, ~ {
+             .ds <- .y
+             .res <- .x
+             ret <- map(.res, ~ .x[[input$db]][[input$sort]]) 
+             if(!is_single_ds) {
+               names(ret) <- paste0(.ds, ': ', names(ret))
+             }
+             ret
+
+      })
+
+      ## flatten the "dataset" level of results
+      #ret <- unlist(ret, recursive=FALSE)
+      return(ret)
     })
 
+    ## Important: we make the pie for *all* datasets
+    ## the returned result is flattened!
     pie <- reactive({
+
+      # following is needed for cases when the UI is not ready yet
+      if(!(isTruthy(input$db))) { return(NULL) }
       
-      .make_pie(res(), cntr, tmod_dbs[[input$db]][["dbobj"]], input$db, tmod_map,
+      .make_pie(res(), dbname=input$db, 
+                     cntr=cntr, 
+                     tmod_dbs=tmod_dbs,
+                     tmod_map=tmod_map,
                      gene_pval=input$gene_pval,
-                     gene_lfc=input$gene_lfc,
-                     text.cex=input$font_size)
+                     gene_lfc =input$gene_lfc)
     })
 
     observeEvent(input$plot_click, {
-      df <- plot_df()
+      .ds   <- ds_label_map[ input$plot_click$panelvar1 ]
+      .cntr <- cntr_label_map[ input$plot_click$panelvar1 ]
       ret <- list(
                   db   = input$db,
                   sort = input$sort,
-                  cntr = input$plot_click$panelvar1,
+                  cntr = .cntr,
+                  ds   =.ds,
                   id   = unlist(input$plot_click$domain$discrete_limits$y)[
                                 round(input$plot_click$y) ],
 
@@ -309,28 +420,30 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
     fig_height <- reactiveVal()
 
     observeEvent(input$figure_size, {
-    fig_width(
-      as.numeric(gsub(" *([0-9]+) *x *([0-9]+)", "\\1", input$figure_size))
-    )
+      fig_width(
+        as.numeric(gsub(" *([0-9]+) *x *([0-9]+)", "\\1", input$figure_size))
+      )
 
-    fig_height(
-      as.numeric(gsub(" *([0-9]+) *x *([0-9]+)", "\\2", input$figure_size))
-    )
+      fig_height(
+        as.numeric(gsub(" *([0-9]+) *x *([0-9]+)", "\\2", input$figure_size))
+      )
     })
 
 
     observe({ output$panelPlot <- renderPlot({
       enable("save")
 
-      g <- gg_panelplot(res(), pie=pie(), 
+      .pie <- pie()
+      if(is.null(.pie)) { return(NULL) }
+
+      .res <- flatten(res())
+
+      g <- gg_panelplot(.res, pie=.pie, 
                      filter_row_auc=input$filter_auc,
                      filter_row_q=input$filter_pval,
                      label_angle=input$label_angle) + 
                                    theme(text=element_text(size=input$font_size))
 
-
-      pg <- ggplot_build(g)
-      plot_df(pg$data[[1]])
 
       g
     }, width=fig_width(), height=fig_height()) })
@@ -343,36 +456,55 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
 
 
 
-.make_pie <- function(res, cntr=NULL, tmod_db_obj=NULL, dbname=NULL, tmod_map=NULL, 
+.make_pie <- function(tmod_res, dbname, cntr=NULL, tmod_dbs=NULL, tmod_map=NULL, 
+                           gene_pval=0.05, gene_lfc=0.5) {
+
+  if(is.null(cntr)) { return(NULL) }
+  #message("Making \U1F967 pie")
+
+  names(datasets) <- datasets <- names(tmod_res)
+  mp(datasets)
+
+  pie <- map(datasets, ~ {
+               ds <- .x
+               .make_pie_ds(tmod_res[[ds]], dbname=dbname, 
+                     cntr=cntr[[ds]], 
+                     tmod_db_obj=tmod_dbs[[ds]][[dbname]][["dbobj"]],
+                     tmod_map=tmod_map[[ds]],
+                     gene_pval=gene_pval,
+                     gene_lfc =gene_lfc)
+  })
+
+  return(flatten(pie))
+}
+
+## make pie for a single dataset
+.make_pie_ds <- function(res, dataset, dbname, cntr=NULL, tmod_db_obj=NULL, tmod_map=NULL, 
                            gene_pval=0.05, gene_lfc=0.5, ...) {
-  pie <- NULL
 
-  if(!is.null(cntr)) {
-    stopifnot(all(names(res) %in% names(cntr)))
-    stopifnot(!is.null(tmod_db_obj) && !is.null(dbname) && !is.null(tmod_map))
+  stopifnot(all(names(res) %in% names(cntr)))
+  stopifnot(!is.null(tmod_db_obj) && !is.null(dbname) && !is.null(tmod_map))
 
-    tmod_s <- tmodSummary(res)
-    dbobj <- tmod_db_obj[ tmod_s[["ID"]] ]
-    genes_s <- unique(unlist(dbobj[["MODULES2GENES"]]))
+  tmod_s <- tmodSummary(res)
+  dbobj <- tmod_db_obj[ tmod_s[["ID"]] ]
+  genes_s <- unique(unlist(dbobj[["MODULES2GENES"]]))
 
-    mp_id <- tmod_map$dbs[[dbname]]
-    mp <- tmod_map$maps[[mp_id]]
+  mp_id <- tmod_map$dbs[[dbname]]
+  mp <- tmod_map$maps[[mp_id]]
 
-    genes_sel <- unique(unlist(map(cntr, ~ .x[["PrimaryID"]])))
-    genes_sel <- genes_sel[ mp[ genes_sel ] %in% genes_s ]
+  genes_sel <- unique(unlist(map(cntr, ~ .x[["PrimaryID"]])))
+  genes_sel <- genes_sel[ mp[ genes_sel ] %in% genes_s ]
 
-    lfcs  <- map_dfc(cntr, ~ .x[ match(genes_sel, .x[["PrimaryID"]]), ][["log2FoldChange"]])
-    pvals <- map_dfc(cntr, ~ .x[ match(genes_sel, .x[["PrimaryID"]]), ][["padj"]])
+  lfcs  <- map_dfc(cntr, ~ .x[ match(genes_sel, .x[["PrimaryID"]]), ][["log2FoldChange"]])
+  pvals <- map_dfc(cntr, ~ .x[ match(genes_sel, .x[["PrimaryID"]]), ][["padj"]])
 
-    ## XXX this is a workaround for a bug in tmod; in new versions it will
-    ## not be necessary.
-    lfcs[ is.na(lfcs) ] <- 0
-    pvals[ is.na(pvals) ] <- 1
+  ## XXX this is a workaround for a bug in tmod; in new versions it will
+  ## not be necessary.
+  lfcs[ is.na(lfcs) ] <- 0
+  pvals[ is.na(pvals) ] <- 1
 
-    pie <- tmodDecideTests(g = mp[ genes_sel ], lfc = lfcs, pval = pvals, mset=dbobj,
-      lfc.thr = gene_lfc, pval.thr = gene_pval)
-
-  }
+  pie <- tmodDecideTests(g = mp[ genes_sel ], lfc = lfcs, pval = pvals, mset=dbobj,
+    lfc.thr = gene_lfc, pval.thr = gene_pval)
 
   return(pie)
 }

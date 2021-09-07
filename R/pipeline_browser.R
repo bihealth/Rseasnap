@@ -112,9 +112,9 @@ helpUI <- function() {
        box(title="Discordance / concordance plots", width=12, status="primary",
        height="800px", solidHeader=TRUE, discoUI("disco", cntr_titles)),
        )
-#    t4 <- tabItem("panel_plot",
-#       box(title="Panel plot", width=12, status="primary",
-#           solidHeader=TRUE, tmodPanelPlotUI("panelP", dbs, sorting)))
+    t4 <- tabItem("panel_plot",
+       box(title="Panel plot", width=12, status="primary",
+           solidHeader=TRUE, tmodPanelPlotUI("panelP", pipelines)))
 #    t5 <- tabItem("pca",
 #       box(title="Principal Component Analysis", width=12, status="primary",
 #       solidHeader=TRUE, pcaUI("pca", covar, pca_names)),
@@ -126,7 +126,7 @@ helpUI <- function() {
       t7 <- tabItem("help", helpUI())
   dashboardBody(
     tabItems(
-             t1, t2, t3, #t4, t5, 
+             t1, t2, t3, t4,# t5, 
              t6, t7
     ),
     style="min-height:1500px;"
@@ -300,22 +300,23 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
                                       annot   =data[["annot"]])
     gene_id2 <- discoServer("disco", data[["cntr"]], data[["annot"]])
     mod_id1  <- tmodBrowserTableServer("tmodT", data[["tmod_res"]], multilevel=TRUE)
-#   mod_id2  <- tmodPanelPlotServer("panelP", cntr    =data[["cntr"]], 
-#                                             tmod_res=data[["tmod_res"]],
-#                                             tmod_dbs=data[["tmod_dbs"]], 
-#                                             tmod_map=data[["tmod_map"]], 
-#                                             annot   =data[["annot"]])
+    mod_id2  <- tmodPanelPlotServer("panelP", cntr    =data[["cntr"]], 
+                                              tmod_res=data[["tmod_res"]],
+                                              tmod_dbs=data[["tmod_dbs"]], 
+                                              tmod_map=data[["tmod_map"]], 
+                                              annot   =data[["annot"]])
 
 #    pcaServer("pca", pca$x, covar)
     
-    ## combine events selecting a gene set 
+    ## combine events selecting a module set 
     observeEvent(mod_id1(),  { 
                    mod_id(mod_id1()) 
     })
-#    observeEvent(mod_id2(), { 
-#      updateTabItems(session, "navid", "tmod_browser")
-#      mod_id(mod_id2()) 
-#    })
+
+    observeEvent(mod_id2(), { 
+      updateTabItems(session, "navid", "tmod_browser")
+      mod_id(mod_id2()) 
+    })
 
     ## combine events selecting a gene from gene browser and from disco
     observeEvent(gene_id1(), { gene_id(gene_id1()) })

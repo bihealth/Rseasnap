@@ -250,7 +250,7 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
 
     ## create the evidence plot and display the command line to replicate it
     output$evidencePlot <- renderPlot({
-      message("Rendering plot")
+      #message("Rendering plot")
       mod <- req(selmod())
 
       if(is.null(mod$id)) { return(NULL) }

@@ -5,16 +5,15 @@
 \alias{tmodPanelPlotServer}
 \title{Shiny module displaying tmod panel plots}
 \usage{
-tmodPanelPlotUI(id, dbs, sorting)
+tmodPanelPlotUI(id, ds_titles = NULL)
 
 tmodPanelPlotServer(id, cntr, tmod_res, tmod_dbs, tmod_map, annot = NULL)
 }
 \arguments{
 \item{id}{Module ID}
 
-\item{dbs}{named character vector with the IDs and names of the gene set databases}
-
-\item{sorting}{named character vector with the sorting types}
+\item{ds_titles}{if there are multiple data sets, this character vector
+defines what they are to show an approppriate selector in the UI}
 
 \item{cntr}{list of data frames with the results of differential
 expression analysis. Rownames must correspond to the 'PrimaryID' column
