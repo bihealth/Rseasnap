@@ -68,12 +68,18 @@ helpUI <- function() {
        sidebarMenu(
          # Setting id makes input$tabs give the tabName of currently-selected tab
          id = "navid",
-         menuItem("Gene browser",  tabName = "gene_browser", icon = icon("dna")),
-         menuItem("Tmod browser",  tabName = "tmod_browser", icon = icon("project-diagram")),
-         menuItem("Disco plots",   tabName = "disco", icon = icon("chart-line")),
-         menuItem("Panel plots",   tabName = "panel_plot", icon = icon("grip-vertical")),
-         menuItem("PCA",           tabName = "pca", icon = icon("cube")),
-         menuItem("Pipeline Info", tabName = "pip_info", icon = icon("info-circle")),
+         tipify(menuItem("Gene browser",  tabName = "gene_browser", icon = icon("dna")),
+                "Browse genes and view gene expression"),
+         tipify(menuItem("Tmod browser",  tabName = "tmod_browser", icon = icon("project-diagram")),
+                "Browse gene set enrichments"),
+         tipify(menuItem("Disco plots",   tabName = "disco", icon = icon("chart-line")),
+                "Compare contrasts"),
+         tipify(menuItem("Panel plots",   tabName = "panel_plot", icon = icon("grip-vertical")),
+                "Overview of gene set enrichments"),
+         tipify(menuItem("PCA",           tabName = "pca", icon = icon("cube")),
+                "Principal component analysis"),
+         tipify(menuItem("Workflow Info", tabName = "pip_info", icon = icon("info-circle")),
+                "View workflow parameters"),
          menuItem("Help",          tabName = "help", icon = icon("question-circle"))
        )
   )
@@ -115,19 +121,18 @@ helpUI <- function() {
     t4 <- tabItem("panel_plot",
        box(title="Panel plot", width=12, status="primary",
            solidHeader=TRUE, tmodPanelPlotUI("panelP", pipelines)))
-#    t5 <- tabItem("pca",
-#       box(title="Principal Component Analysis", width=12, status="primary",
-#       solidHeader=TRUE, pcaUI("pca", covar, pca_names)),
-#       useShinyjs()
-#       )
-      t6 <- tabItem("pip_info", 
+    t5 <- tabItem("pca",
+       box(title="Principal Component Analysis", width=12, status="primary",
+       solidHeader=TRUE, pcaUI("pca", pipelines)),
+       useShinyjs()
+       )
+    t6 <- tabItem("pip_info", 
          infoUI(pipelines))
          
-      t7 <- tabItem("help", helpUI())
+    t7 <- tabItem("help", helpUI())
   dashboardBody(
     tabItems(
-             t1, t2, t3, t4,# t5, 
-             t6, t7
+             t1, t2, t3, t4, t5, t6, t7
     ),
     style="min-height:1500px;"
   )
@@ -201,7 +206,7 @@ helpUI <- function() {
   ret[["rld"]]     <- get_object(.pip, step="DESeq2", extension="rld.blind.rds")
   ret[["rld"]]     <- ret[["rld"]]@assays@data@listData[[1]]
 
-  ret[["pca"]] <- prcomp(t(ret[["rld"]]), scale.=TRUE)
+  ret[["pca"]] <- prcomp(t(ret[["rld"]]), scale.=TRUE)$x
   
   ret[["cntr_titles"]]        <- map_chr(ret[["config"]]$contrasts$contrast_list, `[[`, "ID")
   names(ret[["cntr_titles"]]) <- map_chr(ret[["config"]]$contrasts$contrast_list, `[[`, "title")
@@ -241,7 +246,8 @@ helpUI <- function() {
 #'   pipeline_browser(pip)
 #' }
 #' @export
-pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs=NULL,
+pipeline_browser <- function(pip, title="Workflow output explorer", 
+                             annot=NULL, cntr=NULL, tmod_res=NULL, tmod_dbs=NULL,
                              primary_id="PrimaryID") {
 
   addResourcePath("icons", system.file("icons", package="Rseasnap"))
@@ -306,7 +312,7 @@ pipeline_browser <- function(pip, title="Pipeline browser", annot=NULL, cntr=NUL
                                               tmod_map=data[["tmod_map"]], 
                                               annot   =data[["annot"]])
 
-#    pcaServer("pca", pca$x, covar)
+    pcaServer("pca", data[["pca"]], data[["covar"]])
     
     ## combine events selecting a module set 
     observeEvent(mod_id1(),  { 
