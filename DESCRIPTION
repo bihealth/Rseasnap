@@ -1,6 +1,6 @@
 Package: Rseasnap
 Title: Utilities for the sea-snap pipeline
-Version: 0.2.5
+Version: 0.2.7
 Authors@R: 
     person(given = "January",
            family = "Weiner",

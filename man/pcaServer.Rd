@@ -5,31 +5,39 @@
 \alias{pcaServer}
 \title{Shiny Module – PCA plots}
 \usage{
-pcaUI(id, covar, pca_names, colorBy = NULL, symbolBy = NULL)
+pcaUI(id, datasets = NULL)
 
-pcaServer(id, pca, covar, idcol = "ID", threeD = FALSE)
+pcaServer(
+  id,
+  pca,
+  covar,
+  idcol = "ID",
+  threeD = FALSE,
+  colorBy = NULL,
+  symbolBy = NULL
+)
 }
 \arguments{
 \item{id}{identifier of the shiny module (character vector)}
 
-\item{covar}{data frame containing covariates. The identifiers of the
-samples in the covariate data frame are taken from the ID column (by
-default, "ID").}
-
-\item{pca_names}{names of the PCA components to include in the plot. If
-not specified, all components will be accessible from the interface.}
-
-\item{colorBy}{selected covariate to use for coloring the plot}
-
-\item{symbolBy}{selected covariate to use for symbols on the plot}
+\item{datasets}{if not NULL, a character vector specifying the data sets
+(see Details)}
 
 \item{pca}{pca matrix – columns correspond to principal components, rows
 to observations. Rows must be named and must correspond to the ID column
 of the covariate data frame.}
 
+\item{covar}{data frame containing covariates. The identifiers of the
+samples in the covariate data frame are taken from the ID column (by
+default, "ID").}
+
 \item{idcol}{name of the ID column in the covariate data frame.}
 
 \item{threeD}{whether the plot should be three-dimensional by default}
+
+\item{colorBy}{selected covariate to use for coloring the plot}
+
+\item{symbolBy}{selected covariate to use for symbols on the plot}
 }
 \description{
 Shiny Module – PCA plots
@@ -41,10 +49,10 @@ if(interactive()) {
  
   pca <- prcomp(iris[,1:4], scale.=TRUE)
  
-  ui <- fluidPage(pcaUI("pca", covar, colnames(pca$x), colorBy="Species"))
+  ui <- fluidPage(pcaUI("pca"))
  
   server <- function(input, output, session) {
-    pcaServer("pca", pca$x, covar)
+    pcaServer("pca", pca$x, covar, colorBy="Species")
   }
  
   shinyApp(ui, server)

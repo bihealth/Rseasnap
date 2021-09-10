@@ -179,15 +179,7 @@ tmodPanelPlotUI <- function(id, ds_titles=NULL) {
            fluidRow(numericInput(NS(id, "font_size"), label="Font size", value = 12, 
                                  min=3, step=1, width="100%"),
                     bsTooltip(NS(id, "font_size"), "Change the font size of plot labels")),
-           fluidRow(selectizeInput(NS(id, "figure_size"), label="Figure size", 
-                                choices=c("800x800", 
-                                          "600x800",
-                                          "1200x800",
-                                          "600x1200",
-                                          "800x1200",
-                                          "1200x1200"),
-                                 options = list(create=TRUE, plugins = list('restore_on_backspace')),
-                                 width="100%"),
+           fluidRow(figsizeInput(NS(id, "figure_size"), width="100%"),
                 bsTooltip(NS(id, "figure_size"), 
                   "Change the figure size (in pixels), width x height. Press backspace to enter your own sizes.")),
            fluidRow(selectizeInput(NS(id, "label_angle"), label="Contrast label", 
@@ -331,7 +323,6 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
 
       .res <- flatten(res())
 
-      browser()
       mf("Saving to file %s", file)
       pdf(file=file, width=fig_width() / 75, height=fig_height() / 75)
       g <- gg_panelplot(.res, pie=.pie, 

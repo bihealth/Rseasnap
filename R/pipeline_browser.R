@@ -3,19 +3,23 @@ options(spinner.type=6)
 
 
 ## UI for the information about the pipeline
-infoUI <- function(pipelines) {
+infoUI <- function(datasets) {
 
   selector <- selectInput("select_pipeline",
-                          label="Select pipeline:",
-                          choices=pipelines)
+                          label="Select data set:",
+                          choices=datasets, width="90%")
+  if(length(datasets) < 2L) {
+    selector <- hidden(selector)
+  }
 
   column(width=12,
-    box(title=sprintf("%s: overview", textOutput("project_title")), width=6,
+    box(title="Overview", width=6,
         solidHeader=TRUE, status="primary", collapsible=TRUE,
+        column(width=12,
         fluidRow(selector),
         fluidRow(
            tableOutput("project_overview")
-    )),
+    ))),
     box(title="Contrasts", width=6,
         solidHeader=TRUE, status="primary", collapsible=TRUE,
         fluidRow(
@@ -69,17 +73,19 @@ helpUI <- function() {
          # Setting id makes input$tabs give the tabName of currently-selected tab
          id = "navid",
          tipify(menuItem("Gene browser",  tabName = "gene_browser", icon = icon("dna")),
-                "Browse genes and view gene expression"),
+                "Browse genes and view gene expression", placement="right"),
+         tipify(menuItem("Volcano plots",  tabName = "volcano_plots", icon = icon("caret-square-down")),
+                "Browse genes and view gene expression", placement="right"),
          tipify(menuItem("Tmod browser",  tabName = "tmod_browser", icon = icon("project-diagram")),
-                "Browse gene set enrichments"),
+                "Browse gene set enrichments", placement="right"),
          tipify(menuItem("Disco plots",   tabName = "disco", icon = icon("chart-line")),
-                "Compare contrasts"),
+                "Compare contrasts", placement="right"),
          tipify(menuItem("Panel plots",   tabName = "panel_plot", icon = icon("grip-vertical")),
-                "Overview of gene set enrichments"),
+                "Overview of gene set enrichments", placement="right"),
          tipify(menuItem("PCA",           tabName = "pca", icon = icon("cube")),
-                "Principal component analysis"),
+                "Principal component analysis", placement="right"),
          tipify(menuItem("Workflow Info", tabName = "pip_info", icon = icon("info-circle")),
-                "View workflow parameters"),
+                "View workflow parameters", placement="right"),
          menuItem("Help",          tabName = "help", icon = icon("question-circle"))
        )
   )
@@ -106,6 +112,12 @@ helpUI <- function() {
              solidHeader=TRUE, geneBrowserPlotUI("geneP", contrasts=TRUE)),
         useShinyjs()
       )
+    t10 <- tabItem("volcano_plots", 
+         box(title="Volcano plots", width=12, status="primary", 
+             collapsible=TRUE,
+             solidHeader=TRUE, volcanoUI("volcano", pipelines))
+         )
+ 
     t2 <- tabItem("tmod_browser",
        box(title="Gene set enrichment overview", width=12, status="primary",
            collapsible=TRUE,
@@ -132,7 +144,7 @@ helpUI <- function() {
     t7 <- tabItem("help", helpUI())
   dashboardBody(
     tabItems(
-             t1, t2, t3, t4, t5, t6, t7
+             t1, t10, t2, t3, t4, t5, t6, t7
     ),
     style="min-height:1500px;"
   )
@@ -286,9 +298,20 @@ pipeline_browser <- function(pip, title="Workflow output explorer",
 
     ## pipeline browser specific functions
 
-#   output$project_overview   <- renderTable({ project_overview_table(config, title) })
-#   output$contrasts_overview <- renderTable({ contrasts_overview_table(config) })
-#   output$covariates         <- renderDataTable({ covariate_table(covar) })
+    observeEvent(input$select_pipeline, {
+      ds <- input$select_pipeline
+      if(!isTruthy(ds)) {
+        return(NULL)
+      }
+                   
+    output$project_overview   <- renderTable({ 
+      project_overview_table(data[["config"]][[ds]], title) 
+    })
+    output$contrasts_overview <- renderTable({ 
+      contrasts_overview_table(data[["config"]][[ds]]) })
+    output$covariates         <- renderDataTable({ covariate_table(data[["covar"]][[ds]]) 
+      })
+      })
 
     ## this reactive value holds the id of the selected gene, however the
     ## selection has been done
@@ -313,6 +336,7 @@ pipeline_browser <- function(pip, title="Workflow output explorer",
                                               annot   =data[["annot"]])
 
     pcaServer("pca", data[["pca"]], data[["covar"]])
+    volcanoServer("volcano", data[["cntr"]], annot=data[["annot"]], gene_id=gene_id)
     
     ## combine events selecting a module set 
     observeEvent(mod_id1(),  { 
@@ -327,12 +351,16 @@ pipeline_browser <- function(pip, title="Workflow output explorer",
     ## combine events selecting a gene from gene browser and from disco
     observeEvent(gene_id1(), { gene_id(gene_id1()) })
     observeEvent(gene_id2(), { 
-      updateTabItems(session, "navid", "gene_browser")
+      #updateTabItems(session, "navid", "gene_browser")
       gene_id(gene_id2())
     })
     observeEvent(gene_id3(), { 
-      updateTabItems(session, "navid", "gene_browser")
+      #updateTabItems(session, "navid", "gene_browser")
       gene_id(gene_id3())
+    })
+
+    observeEvent(gene_id(), {
+      updateTabItems(session, "navid", "gene_browser")
     })
 
     geneBrowserPlotServer("geneP", gene_id, covar=data[["covar"]], 

@@ -51,9 +51,6 @@ pcaUI <- function(id, datasets=NULL) {
           column(width=4, uiOutput(NS(id, "pca_x_ui"))),
           column(width=4, uiOutput(NS(id, "pca_y_ui"))),
           column(width=4, uiOutput(NS(id, "pca_z_ui")))
-#         selectInput(NS(id, "x"), "X: ", choices=pca_names, selected=pca_names[1], width="100%")),
-#         selectInput(NS(id, "y"), "Y: ", choices=pca_names, selected=pca_names[2], width="100%")),
-#         selectInput(NS(id, "z"), "Z: ", choices=pca_names, selected=pca_names[3], width="100%"))
         ),
       width=3),
       mainPanel(
@@ -90,12 +87,11 @@ pcaUI <- function(id, datasets=NULL) {
 #' @param symbolBy selected covariate to use for symbols on the plot
 #' @param threeD whether the plot should be three-dimensional by default
 #' @param idcol name of the ID column in the covariate data frame.
-#' @param pca_names names of the PCA components to include in the plot. If
-#'        not specified, all components will be accessible from the interface.
 #' @importFrom plotly renderPlotly plotlyOutput
 #' @importFrom shiny isTruthy
 #' @importFrom stats as.formula prcomp
 #' @importFrom shinyjs hidden
+#' @importFrom shinyBS tipify
 #' @examples
 #' if(interactive()) {
 #'   data(iris)
@@ -189,7 +185,9 @@ pcaServer <- function(id, pca, covar, idcol="ID", threeD=FALSE, colorBy=NULL, sy
       x <- input$x
       y <- input$y
       z <- input$z
-      if(any(is.null(c(ds, x, y, z)))) { return("") }
+      if(!(isTruthy(x) && isTruthy(y) && isTruthy(z))) {
+        return(NULL)
+      }
  
       symbol <- .getcol(input$symbol, df[[ds]])
       color  <- .getcol(input$color, df[[ds]])
@@ -266,11 +264,11 @@ plot_pca_shiny <- function(x, covar, colorBy=NULL, symbolBy=NULL) {
 
   pca <- prcomp(x, scale.=TRUE)
 
-  ui <- fluidPage(pcaUI("pca", covar, colnames(pca$x), 
-                  colorBy=colorBy, symbolBy=symbolBy))
+  ui <- fluidPage(pcaUI("pca")) 
+                  
 
   server <- function(input, output, session) {
-    pcaServer("pca", pca$x, covar)
+    pcaServer("pca", pca$x, covar, colorBy=colorBy, symbolBy=symbolBy)
   }
 
   shinyApp(ui, server)

@@ -6,7 +6,7 @@
 \usage{
 pipeline_browser(
   pip,
-  title = "Pipeline browser",
+  title = "Workflow output explorer",
   annot = NULL,
   cntr = NULL,
   tmod_res = NULL,
