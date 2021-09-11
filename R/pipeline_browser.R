@@ -297,7 +297,6 @@ pipeline_browser <- function(pip, title="Workflow output explorer",
   server <- function(input, output, session) {
 
     ## pipeline browser specific functions
-
     observeEvent(input$select_pipeline, {
       ds <- input$select_pipeline
       if(!isTruthy(ds)) {
@@ -316,14 +315,13 @@ pipeline_browser <- function(pip, title="Workflow output explorer",
     ## this reactive value holds the id of the selected gene, however the
     ## selection has been done
     gene_id <- reactiveValues()
-    mod_id  <- reactiveVal()
-    mod_id(list())
+    gs_id   <- reactiveValues()
 
     geneBrowserTableServer("geneT", data[["cntr"]], data[["annot"]], 
       annot_linkout=data[["annot_linkout"]],
       gene_id=gene_id)
 
-    tmodBrowserPlotServer("tmodP", mod_id, 
+    tmodBrowserPlotServer("tmodP", gs_id, 
                                       tmod_dbs=data[["tmod_dbs"]], 
                                       cntr    =data[["cntr"]], 
                                       tmod_map=data[["tmod_map"]], 
@@ -333,29 +331,23 @@ pipeline_browser <- function(pip, title="Workflow output explorer",
 
     discoServer("disco", data[["cntr"]], data[["annot"]], gene_id=gene_id)
 
-    mod_id1  <- tmodBrowserTableServer("tmodT", data[["tmod_res"]], multilevel=TRUE)
-    mod_id2  <- tmodPanelPlotServer("panelP", cntr    =data[["cntr"]], 
-                                              tmod_res=data[["tmod_res"]],
-                                              tmod_dbs=data[["tmod_dbs"]], 
-                                              tmod_map=data[["tmod_map"]], 
-                                              annot   =data[["annot"]])
+    tmodBrowserTableServer("tmodT", data[["tmod_res"]], gs_id=gs_id, multilevel=TRUE)
+    tmodPanelPlotServer("panelP", cntr    =data[["cntr"]], 
+                                  tmod_res=data[["tmod_res"]],
+                                  tmod_dbs=data[["tmod_dbs"]], 
+                                  tmod_map=data[["tmod_map"]], 
+                                  annot   =data[["annot"]],
+                                  gs_id=gs_id)
  
     pcaServer("pca", data[["pca"]], data[["covar"]])
     volcanoServer("volcano", data[["cntr"]], annot=data[["annot"]], gene_id=gene_id)
     
-    ## combine events selecting a module set 
-    observeEvent(mod_id1(),  { 
-                   mod_id(mod_id1()) 
-    })
- 
-    observeEvent(mod_id2(), { 
+    observeEvent(gs_id$id, { 
       updateTabItems(session, "navid", "tmod_browser")
-      mod_id(mod_id2()) 
     })
  
     ## combine events selecting a gene from gene browser and from disco
     observeEvent(gene_id$id, {
-                   message("gene_id change observed")
       updateTabItems(session, "navid", "gene_browser")
     })
  

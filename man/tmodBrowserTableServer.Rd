@@ -7,7 +7,7 @@
 \usage{
 tmodBrowserTableUI(id, cntr_titles)
 
-tmodBrowserTableServer(id, tmod_res, multilevel = FALSE)
+tmodBrowserTableServer(id, tmod_res, gs_id = NULL, multilevel = FALSE)
 }
 \arguments{
 \item{id}{identifier for the namespace of the module}
@@ -16,10 +16,13 @@ tmodBrowserTableServer(id, tmod_res, multilevel = FALSE)
 
 \item{tmod_res}{results of tmod analysis, returned by \code{get_tmod_res}}
 
+\item{gs_id}{a list of reactive values (returned by \code{reactiveValues()}), including
+dataset (\code{ds}), gene set ID (\code{id}), contrast id (\code{cntr}), database ID
+(\code{db}) and sorting mode (\code{sort}). If \code{mod_id} is not \code{NULL}, these
+reactive values will be populated, possibly triggering an action in
+another shiny module.}
+
 \item{multilevel}{if TRUE, the results are grouped in data sets}
-}
-\value{
-reactive value producing a list containing the module id, contrast id, db name and sort type.
 }
 \description{
 Shiny Module – tmod results browser table selection

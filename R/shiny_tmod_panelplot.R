@@ -243,7 +243,12 @@ tmodPanelPlotUI <- function(id, ds_titles=NULL) {
 #' @param annot data frame containing at least the column 'PrimaryID'
 #' @param tmod_res list of tmod gene set enrichment analysis
 #' results. See Details.
-#' @param tmod_dbs list of 
+#' @param gs_id a "reactive values" object (returned by `reactiveValues()`), including 
+#' dataset (`ds`), gene set ID (`id`), contrast id (`cntr`), database ID
+#' (`db`) and sorting mode (`sort`). If `mod_id` is not `NULL`, these
+#' reactive values will be populated, possibly triggering an action in
+#' another shiny module.
+#' @param tmod_dbs named list of tmod databases, see Details.
 #' @param ds_titles if there are multiple data sets, this character vector
 #'        defines what they are to show an approppriate selector in the UI
 #' @return Returns a reactive value which is a list with elements
@@ -251,7 +256,7 @@ tmodPanelPlotUI <- function(id, ds_titles=NULL) {
 #' @importFrom shiny observe selectizeInput
 #' @importFrom shinyBS bsTooltip addTooltip
 #' @export
-tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NULL) {
+tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NULL, annot=NULL) {
 
   if(!is.data.frame(cntr[[1]])) {
     message("tmodPanelPlotServer: cntr[[1]] is not a data frame, assuming multilevel mode")
@@ -290,8 +295,6 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
     message("Launching tmod panelplot server")
     disable("save")
 
-    selection <- reactiveVal()
-
     output$db_field <- renderUI({
       if(is_single_ds) { .ds <- ds_ids[1] } else { .ds <- input$dataset }
       dbs <- names(tmod_res[[.ds]][[1]])
@@ -304,7 +307,6 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
       selectInput(NS(id, "sort"),  label="Sorting", choices=sorting, width="100%")
     })
 
-    selection(list(click=0))
 
    ## Save figure as a PDF
    output$save <- downloadHandler(
@@ -392,19 +394,13 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
     })
 
     observeEvent(input$plot_click, {
-      .ds   <- ds_label_map[ input$plot_click$panelvar1 ]
-      .cntr <- cntr_label_map[ input$plot_click$panelvar1 ]
-      ret <- list(
-                  db   = input$db,
-                  sort = input$sort,
-                  cntr = .cntr,
-                  ds   =.ds,
-                  id   = unlist(input$plot_click$domain$discrete_limits$y)[
-                                round(input$plot_click$y) ],
-
-                  click = selection()$click + 1
-                  )
-      selection(ret)
+      gs_id$db    <- input$db
+      gs_id$sort  <- input$sort
+      gs_id$cntr  <- cntr_label_map[ input$plot_click$panelvar1 ]
+      gs_id$ds    <- ds_label_map[ input$plot_click$panelvar1 ]
+      gs_id$id    <- unlist(input$plot_click$domain$discrete_limits$y)[
+                      round(input$plot_click$y) ]
+      gs_id$click <-  gs_id$click + 1
     })
 
     fig_width <- reactiveVal()
@@ -439,7 +435,6 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, annot=NU
       g
     }, width=fig_width(), height=fig_height()) })
 
-    return(selection)
 	})
 
 }

@@ -7,7 +7,15 @@
 \usage{
 tmodPanelPlotUI(id, ds_titles = NULL)
 
-tmodPanelPlotServer(id, cntr, tmod_res, tmod_dbs, tmod_map, annot = NULL)
+tmodPanelPlotServer(
+  id,
+  cntr,
+  tmod_res,
+  tmod_dbs,
+  tmod_map,
+  gs_id = NULL,
+  annot = NULL
+)
 }
 \arguments{
 \item{id}{Module ID}
@@ -22,10 +30,16 @@ of data frame annot.}
 \item{tmod_res}{list of tmod gene set enrichment analysis
 results. See Details.}
 
-\item{tmod_dbs}{list of}
+\item{tmod_dbs}{named list of tmod databases, see Details.}
 
 \item{tmod_map}{mapping between the PrimaryIDs from the contrasts and
 the gene IDs from the gene set databases.}
+
+\item{gs_id}{a "reactive values" object (returned by \code{reactiveValues()}), including
+dataset (\code{ds}), gene set ID (\code{id}), contrast id (\code{cntr}), database ID
+(\code{db}) and sorting mode (\code{sort}). If \code{mod_id} is not \code{NULL}, these
+reactive values will be populated, possibly triggering an action in
+another shiny module.}
 
 \item{annot}{data frame containing at least the column 'PrimaryID'}
 }

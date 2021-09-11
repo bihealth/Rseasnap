@@ -9,21 +9,24 @@ tmodBrowserPlotUI(id)
 
 tmodBrowserPlotServer(
   id,
-  selmod,
+  gs_id,
   tmod_dbs,
   cntr,
   tmod_map = NULL,
   tmod_gl = NULL,
   annot = NULL,
-  primary_id = "PrimaryID"
+  primary_id = "PrimaryID",
+  gene_id = NULL
 )
 }
 \arguments{
 \item{id}{identifier (same as the one passed to geneBrowserTableUI)}
 
-\item{selmod}{a reactive
-value (e.g. returned by tmodBrowserTableServer) and a list containing
-the module id, tmod dataset id, contrast id and sorting type}
+\item{gs_id}{a "reactive values" object (returned by \code{reactiveValues()}), including
+dataset (\code{ds}), gene set ID (\code{id}), contrast id (\code{cntr}), database ID
+(\code{db}) and sorting mode (\code{sort}). If \code{mod_id} is not \code{NULL}, these
+reactive values will be populated, possibly triggering an action in
+another shiny module.}
 
 \item{tmod_dbs}{tmod gene set databases returned by \code{get_tmod_dbs()}}
 
@@ -36,6 +39,10 @@ the module id, tmod dataset id, contrast id and sorting type}
 \item{annot}{data frame containing gene annotation}
 
 \item{primary_id}{name of the column which holds the primary identifiers}
+
+\item{gene_id}{must be a \code{reactiveValues} object. If not NULL, then
+clicking on a gene identifier will modify this object (possibly
+triggering an event in another module).}
 }
 \value{
 returns a reactive value with a selected gene identifier

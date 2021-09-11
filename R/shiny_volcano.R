@@ -1,5 +1,4 @@
 #' @rdname volcanoServer
-#' @importFrom scales trans_new
 #' @export
 volcanoUI <- function(id, datasets=NULL, lfc_thr=1, pval_thr=.05) {
 
@@ -65,12 +64,13 @@ volcanoUI <- function(id, datasets=NULL, lfc_thr=1, pval_thr=.05) {
 #' Shiny module for displaying volcano plots
 #'
 #' Shiny module for displaying volcano plots
+#' @param id module identifier (same as the one passed to volcanoUI)
 #' @param cntr either a named list of data frames, each being the results
 #' of differential expression analysis for one contrast, or a list of data
 #' sets, each data set being a named list of data frames.
 #' @param datasets character vector specifying datasets
 #' @param lfc_thr default lfc threshold
-#' @param lfc_col, pval_col names of the columns in the contrast data
+#' @param lfc_col,pval_col names of the columns in the contrast data
 #' frames which hold the log2 fold changes and p-values, respectively
 #' @param pval_thr default p-value threshold
 #' @param primary_id name of the primary ID column in contrasts and

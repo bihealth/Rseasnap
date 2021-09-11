@@ -12,7 +12,8 @@ geneBrowserTableServer(
   cntr,
   annot,
   annot_linkout = NULL,
-  primary_id = "PrimaryID"
+  primary_id = "PrimaryID",
+  gene_id = NULL
 )
 }
 \arguments{
@@ -30,6 +31,10 @@ corresponding to the rownames of the contrast data frames}
 \item{annot_linkout}{a list; see Details.}
 
 \item{primary_id}{name of the column which holds the primary identifiers}
+
+\item{gene_id}{must be a \code{reactiveValues} object. If not NULL, then
+clicking on a gene identifier will modify this object (possibly
+triggering an event in another module).}
 }
 \value{
 reactive value containing the gene ID

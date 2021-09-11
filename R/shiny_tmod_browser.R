@@ -201,9 +201,6 @@ tmodBrowserPlotUI <- function(id) {
 #' gene identifiers used by the gene set database.
 #'
 #' @param id ID of the shiny module
-#' @param selmod a reactive
-#' value (e.g. returned by tmodBrowserTableServer) and a list containing
-#' the module id, tmod dataset id, contrast id and sorting type
 #' @param tmod_dbs tmod gene set databases returned by `get_tmod_dbs()`
 #' @param tmod_map tmod gene set ID mapping returned by `get_tmod_mapping()`
 #' @param tmod_gl tmod gene lists. See details.
@@ -214,10 +211,15 @@ tmodBrowserPlotUI <- function(id) {
 #' @param gene_id must be a `reactiveValues` object. If not NULL, then
 #' clicking on a gene identifier will modify this object (possibly
 #' triggering an event in another module).
+#' @param gs_id a "reactive values" object (returned by `reactiveValues()`), including 
+#' dataset (`ds`), gene set ID (`id`), contrast id (`cntr`), database ID
+#' (`db`) and sorting mode (`sort`). If `mod_id` is not `NULL`, these
+#' reactive values will be populated, possibly triggering an action in
+#' another shiny module.
 #' @return returns a reactive value with a selected gene identifier
 #' @importFrom shinyBS popify
 #' @export
-tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmod_gl=NULL, annot=NULL, 
+tmodBrowserPlotServer <- function(id, gs_id, tmod_dbs, cntr, tmod_map=NULL, tmod_gl=NULL, annot=NULL, 
                                   primary_id="PrimaryID", gene_id=NULL) {
 
   stopifnot(!is.null(tmod_gl) || !is.null(tmod_map))
@@ -253,31 +255,32 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
     ## create the evidence plot and display the command line to replicate it
     output$evidencePlot <- renderPlot({
       #message("Rendering plot")
-      mod <- req(selmod())
+      req(gs_id$id)
 
-      if(is.null(mod$id)) { return(NULL) }
+      if(is.null(gs_id$id)) { return(NULL) }
       enable("save")
 
-      ds <- mod$ds
-      .plot_evidence(mod_id=mod$id, cntr_id=mod$cntr, db_id=mod$db, sort_id=mod$sort, 
+      ds <- gs_id$ds
+      .plot_evidence(mod_id=gs_id$id, cntr_id=gs_id$cntr, db_id=gs_id$db, sort_id=gs_id$sort, 
                      cntr=cntr[[ds]], tmod_dbs=tmod_dbs[[ds]], tmod_gl=tmod_gl[[ds]], 
                      tmod_map=tmod_map[[ds]], annot=annot[[ds]], primary_id)
     }, width=800, height=600)
 
 
     output$modinfo <- renderText({
-      mod <- req(selmod())
-      if(is.null(mod$id)) { return(NULL) }
-      ret <- .tmod_browser_mod_info(mod$id, mod$ds, mod$db, mod$cntr, mod$sort, 
-                                    tmod_dbs[[mod$ds]], cntr[[mod$ds]], tmod_map[[mod$ds]])
+      req(gs_id$id)
+      if(!isTruthy(gs_id$id)) { return(NULL) }
+      ret <- .tmod_browser_mod_info(gs_id$id, gs_id$ds, gs_id$db, gs_id$cntr, gs_id$sort, 
+                                    tmod_dbs[[gs_id$ds]], cntr[[gs_id$ds]], tmod_map[[gs_id$ds]])
       return(ret)
     })
 
     output$moduleGenes <- renderDataTable({
-      mod <- req(selmod())
-      ds <- mod$ds
+      req(gs_id$id)
+      if(!isTruthy(gs_id$id)) { return(NULL) }
+      ds <- gs_id$ds
       .tmod_browser_gene_table(as.character(gene.but), ds,
-                                    mod$id, mod$db, mod$cntr, mod$cntr, 
+                                    gs_id$id, gs_id$db, gs_id$cntr, gs_id$cntr, 
                                     tmod_dbs[[ds]], cntr[[ds]], tmod_map[[ds]], primary_id)
     })
     
@@ -286,20 +289,20 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
     ## save the plot as PDF
     output$save <- downloadHandler(
       filename = function() {
-        mod <- req(selmod())
-        if(is.null(mod$id)) { return(NULL) }
-        ret <- sprintf("evidence_plot_%s_%s_%s_%s.pdf", mod$ds, mod$db, mod$cntr, mod$id)
+        req(gs_id$id)
+        if(!isTruthy(gs_id$id)) { return(NULL) }
+        ret <- sprintf("evidence_plot_%s_%s_%s_%s.pdf", gs_id$ds, gs_id$db, gs_id$cntr, gs_id$id)
         return(ret)
       },
       content = function(file) {
-        mod <- req(selmod())
-        if(is.null(mod$id)) { return(NULL) }
+        req(gs_id$id)
+        if(!isTruthy(gs_id$id)) { return(NULL) }
         pdf(file=file, width=8, height=5)
         title <- sprintf("%s / %s\nContrast: %s / %s", 
-                         mod$id, mod$db, mod$cntr, mod$sort)
+                         gs_id$id, gs_id$db, gs_id$cntr, gs_id$sort)
 
-        ds <- mod$ds
-        .plot_evidence(mod_id=mod$id, cntr_id=mod$cntr, db_id=mod$db, sort_id=mod$sort, 
+        ds <- gs_id$ds
+        .plot_evidence(mod_id=gs_id$id, cntr_id=gs_id$cntr, db_id=gs_id$db, sort_id=gs_id$sort, 
                      cntr=cntr[[ds]], tmod_dbs=tmod_dbs[[ds]], tmod_gl=tmod_gl[[ds]], 
                      tmod_map=tmod_map[[ds]], annot=annot[[ds]], primary_id)
         dev.off()
@@ -322,8 +325,6 @@ tmodBrowserTableUI <- function(id, cntr_titles) {
            fluidRow(selectInput(NS(id, "contrast"), label="Contrast", choices=cntr_titles, width="100%")),
            fluidRow(uiOutput(NS(id, "table_sel_db"))),
            fluidRow(uiOutput(NS(id, "table_sel_sort"))),
-#           fluidRow(selectInput(NS(id, "db"),       label="Database", choices=dbs,         width="100%")),
-#           fluidRow(selectInput(NS(id, "sort"),     label="Sorting",  choices=sorting,     width="100%")),
            fluidRow(
              checkboxInput(NS(id, "filter"), label="Filter results", value=TRUE),
              numericInput(NS(id, "f_auc"),  label="Filter by AUC", 
@@ -346,13 +347,18 @@ tmodBrowserTableUI <- function(id, cntr_titles) {
 #' Shiny Module – tmod results browser table selection
 #'
 #' Shiny Module – tmod results browser table selection
+#'
+#' @param gs_id a list of reactive values (returned by `reactiveValues()`), including 
+#' dataset (`ds`), gene set ID (`id`), contrast id (`cntr`), database ID
+#' (`db`) and sorting mode (`sort`). If `mod_id` is not `NULL`, these
+#' reactive values will be populated, possibly triggering an action in
+#' another shiny module.
 #' @param tmod_res results of tmod analysis, returned by `get_tmod_res`
 #' @param cntr_titles possibly named character vector with contrast names
 #' @param id identifier for the namespace of the module
 #' @param multilevel if TRUE, the results are grouped in data sets
-#' @return reactive value producing a list containing the module id, contrast id, db name and sort type.
 #' @export
-tmodBrowserTableServer <- function(id, tmod_res, multilevel=FALSE) {
+tmodBrowserTableServer <- function(id, tmod_res, gs_id=NULL, multilevel=FALSE) {
 
   if(!multilevel) {
     tmod_res <- list(default=tmod_res)
@@ -415,17 +421,16 @@ tmodBrowserTableServer <- function(id, tmod_res, multilevel=FALSE) {
       selectInput(NS(id, "sort"), label="Sorting", choices=sorting, width="100%")
     })
 
-    ## this is the reactive expression returned by this module, known in
-    ## tmodBrowserPlotServer as "selmod()"
-    selmod <- reactiveVal()
-
     observeEvent(input$select_button, {
-      tmp <- unlist(strsplit(gsub("^go_", "", input$select_button), "-!-"))
-      selmod(list(ds=tmp[1], id=tmp[2], cntr=tmp[3], db=tmp[4], sort=tmp[5]))
+      if(!is.null(gs_id)) {
+        tmp <- unlist(strsplit(gsub("^go_", "", input$select_button), "-!-"))
+        gs_id$ds <- tmp[1]
+        gs_id$id <- tmp[2]
+        gs_id$cntr <- tmp[3]
+        gs_id$db <- tmp[4]
+        gs_id$sort <- tmp[5]
+      }
     })
-
-    return(selmod)
-
   })
 }
 
@@ -505,8 +510,9 @@ tmod_browser <- function(pip, tmod_dbs=NULL, tmod_res=NULL, annot=NULL) {
     tmodBrowserPlotUI("tmodPlot"))
     
   server <- function(input, output, session) {
-    selmod <- tmodBrowserTableServer("tmod", tmod_res)
-    tmodBrowserPlotServer("tmodPlot", selmod, pip, tmod_dbs, tmod_map, cntr)
+    gs_id <- reactiveValues()
+    tmodBrowserTableServer("tmod", tmod_res, gs_id)
+    tmodBrowserPlotServer("tmodPlot", gs_id, pip, tmod_dbs, tmod_map, cntr)
   }
 
   shinyApp(ui, server)

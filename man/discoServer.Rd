@@ -12,7 +12,8 @@ discoServer(
   cntr,
   annot = NULL,
   selcols = c("PrimaryID", "ENTREZ", "SYMBOL"),
-  primary_id = "PrimaryID"
+  primary_id = "PrimaryID",
+  gene_id = NULL
 )
 }
 \arguments{
@@ -33,6 +34,10 @@ frames in the \code{cntr} list.}
 from the plot}
 
 \item{primary_id}{name of the contrast data frame column with the primary IDs}
+
+\item{gene_id}{must be a \code{reactiveValues} object. If not NULL, then
+clicking on a gene identifier will modify this object (possibly
+triggering an event in another module).}
 }
 \value{
 Returns a reactive expression returning the ID of the activated gene

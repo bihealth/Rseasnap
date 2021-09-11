@@ -64,7 +64,7 @@ pcaUI <- function(id, datasets=NULL) {
 #'
 #' Shiny Module – PCA plots
 #' 
-#' @section Datasets
+#' @section Datasets:
 #'
 #' Rather than specifying pca as a matrix and covariates as a data frame, 
 #' these arguments can be, respectively, named lists of matrices and of data frames. This
