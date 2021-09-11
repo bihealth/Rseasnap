@@ -124,12 +124,10 @@ volcanoServer <- function(id, cntr, lfc_col="log2FoldChange", pval_col="padj",
     }, sanitize.text.function=function(x) x)
 
     observeEvent(input$genebutton, {
-      ids <- strsplit(input$genebutton, '~')[[1]]
       if(!is.null(gene_id)) {
-            gene_id(
-              list(ds=ids[2],
-                   id=ids[3])
-              )
+        ids <- strsplit(input$genebutton, '~')[[1]]
+        gene_id$ds <- ids[2]
+        gene_id$id <- ids[3]
       }
     })
 

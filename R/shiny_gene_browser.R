@@ -220,10 +220,13 @@ geneBrowserTableUI <- function(id, cntr_titles) {
 #' @param primary_id name of the column which holds the primary identifiers
 #' @param cntr_titles named character vector for contrast choices
 #' @param annot_linkout a list; see Details. 
+#' @param gene_id must be a `reactiveValues` object. If not NULL, then
+#' clicking on a gene identifier will modify this object (possibly
+#' triggering an event in another module).
 #' @return reactive value containing the gene ID
 #' @export
 geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL,
-                                   primary_id="PrimaryID") {
+                                   primary_id="PrimaryID", gene_id=NULL) {
 
   multilevel <- .check_multilevel(cntr)
   .check_params(multilevel, cntr=cntr, annot=annot, 
@@ -237,8 +240,6 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL,
 
   moduleServer(id, function(input, output, session) {
 
-    gene_id <- reactiveVal(list(ds=NA, id=NA))
-
     but <- actionButton("go~%s~%s", label=" \U25B6 ", 
                          onclick=sprintf('Shiny.onInputChange(\"%s-select_button\",  this.id)', id),  
                          class = "btn-primary btn-sm")
@@ -247,8 +248,11 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL,
                                    annot_linkout, primary_id=primary_id)
 
     observeEvent(input$select_button, {
-      .ids <- strsplit(input$select_button, '~')[[1]]
-      gene_id(list(ds=.ids[2], id=.ids[3]))
+      if(!is.null(gene_id)) {
+        ids <- strsplit(input$select_button, '~')[[1]]
+        gene_id$ds <- ids[2]
+        gene_id$id <- ids[3]
+      }
     })
 
     observeEvent(input$filter, {
@@ -289,8 +293,6 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL,
         formatSignif(columns=intersect(colnames(res), 
                                        c("baseMean", "log2FoldChange", "pvalue", "padj")), digits=2)
     })
-
-    gene_id
   })
 }
 
@@ -407,6 +409,8 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
     exprs <- list(default=exprs)
     annot <- list(default=annot)
     cntr  <- list(default=cntr)
+  } else {
+    message("geneBrowserPlotServer in multilevel mode")
   }
 
 
@@ -417,8 +421,10 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
     g_id <- reactiveVal()
 
     observe({
-      ds(gene_id()$ds)
-      g_id(gene_id()$id)
+      if(!is.null(gene_id)) {
+        if(isTruthy(gene_id$ds)) { ds(gene_id$ds) }
+        if(isTruthy(gene_id$id)) { g_id(gene_id$id) }
+      }
     })
 
     ## Save figure as a PDF
@@ -443,15 +449,18 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
         dev.off()
       }
     )
-
+ 
     # Show a turbo card for a gene
     output$geneData <- renderText({
-
+      if(!isTruthy(ds()) || !isTruthy(g_id())) {
+        return(NULL)
+      }
+ 
       ret <- sprintf("%s: %s", primary_id, g_id())
       if(!is.null(annot[[ ds() ]])) {
-
+ 
         m <- match(g_id(), annot[[  ds()  ]][[ primary_id ]])
-
+ 
         if(!is.null(symbol_col)) {
           ret <- paste0(ret,
                        sprintf("\nSymbol: %s",
@@ -465,9 +474,12 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
       }
       return(ret)
     })
-
+#
     ## summary contrasts table
     observe({
+      if(!isTruthy(ds()) || !isTruthy(g_id())) {
+        return(NULL)
+      }
       if(!is.null(cntr[[ ds() ]])) {
         output$contr_sum <- DT::renderDataTable({
           cn <- names(cntr[[ ds() ]])
@@ -481,19 +493,22 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
                                          mutate("Data set"=.ds, Contrast=.y)
                             })
                       })
-
+ 
           numcol <- map_lgl(res, is.numeric)
           res %>% datatable(escape=FALSE, selection='none', options=list(pageLength=5)) %>%
             formatSignif(columns=colnames(res)[numcol], digits=2)
         })
     }})
-
+ 
     ## Additional information - e.g. correlation coefficient if the
     ## covariate is numeric
     output$addInfo <- renderText({
+      if(!isTruthy(ds()) || !isTruthy(g_id())) {
+        return(NULL)
+      }
       .gene_browser_info_tab(g_id(), covar[[g_id()]][[input$covarName]], exprs[[ds()]][ g_id(), ])
     })
-
+ 
     ## reload the plot interface only if the data set (and covariates)
     ## changed
     output$col_control <- renderUI({
@@ -501,9 +516,10 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
       if(!isTruthy(.ds)) { .ds <- 1 }
       .dynamic_col_control(id, covar[[.ds]])
     })
-
+ 
     ## The actual plot
     output$countsplot <- renderPlot({
+      if(!isTruthy(ds()) || !isTruthy(g_id())) { return(NULL) }
       if(is.na(g_id())) { return(NULL) }
       enable("save")
       
@@ -574,7 +590,8 @@ gene_browser <- function(pip, cntr=NULL, annot=NULL) {
 
   ## prepare the server
   server <- function(input, output, session) {
-    gene_id <- geneBrowserTableServer("geneTab", cntr, annot)
+    gene_id <- reactiveValues()
+    geneBrowserTableServer("geneTab", cntr, annot, gene_id=gene_id)
     geneBrowserPlotServer("genePlot", gene_id, covar, rld, annot)
 
     message("launching!")

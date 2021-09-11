@@ -67,6 +67,9 @@ discoUI <- function(id, cntr_titles) {
 #'        from the plot
 #' @param cntr_titles character vector containing the IDs of the contrasts
 #'        (same as `names(cntr)`).
+#' @param gene_id must be a `reactiveValues` object. If not NULL, then
+#' clicking on a gene identifier will modify this object (possibly
+#' triggering an event in another module).
 #' @return Returns a reactive expression returning the ID of the activated gene
 #' @examples
 #' if(interactive()) {
@@ -86,7 +89,7 @@ discoUI <- function(id, cntr_titles) {
 #' @export
 discoServer <- function(id, cntr, annot=NULL,
     selcols=c("PrimaryID", "ENTREZ", "SYMBOL"),
-    primary_id="PrimaryID") {
+    primary_id="PrimaryID", gene_id=NULL) {
 
   if(!is.data.frame(cntr[[1]])) {
     message("discoServer in multilevel mode")
@@ -208,18 +211,13 @@ discoServer <- function(id, cntr, annot=NULL,
       current_genes()
     })
 
-    ## returns a reactive with the gene ID of the clicked gene
-    gene_id <- reactiveVal()
 
     observeEvent(input$genebutton, {
       ids <- strsplit(input$genebutton, '~')[[1]]
-      gene_id(
-              list(ds=ids[2],
-                   id=ids[3])
-              )
+      gene_id$ds <- ids[2]
+      gene_id$id <- ids[3]
     })
 
-    return(gene_id)
   })
 }
 

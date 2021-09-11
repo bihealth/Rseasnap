@@ -211,11 +211,14 @@ tmodBrowserPlotUI <- function(id) {
 #' @param primary_id name of the column which holds the primary identifiers
 #' @param cntr list of contrast results returned by `get_contrasts()`
 #' @param annot data frame containing gene annotation 
+#' @param gene_id must be a `reactiveValues` object. If not NULL, then
+#' clicking on a gene identifier will modify this object (possibly
+#' triggering an event in another module).
 #' @return returns a reactive value with a selected gene identifier
 #' @importFrom shinyBS popify
 #' @export
 tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmod_gl=NULL, annot=NULL, 
-                                  primary_id="PrimaryID") {
+                                  primary_id="PrimaryID", gene_id=NULL) {
 
   stopifnot(!is.null(tmod_gl) || !is.null(tmod_map))
 
@@ -232,18 +235,17 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
   moduleServer(id, function(input, output, session) {
     message("Launching tmod plot server")
 
-    ## gene_id is necessary to call the gene plots in another tab
-    gene_id <- reactiveVal("")
-
     gene.but <- actionButton("go~%s~%s", label=" \U25B6 ", 
                         onclick=sprintf('Shiny.onInputChange(\"%s-gene_select_button\",  this.id)', id),  
                         class = "btn-primary btn-sm")
 
-    gene_id <- reactiveVal(list(ds=NA, id=NA))
-
     observeEvent(input$gene_select_button, {
-      .ids <- strsplit(input$gene_select_button, '~')[[1]]
-      gene_id(list(ds=.ids[2], id=.ids[3]))
+      if(!is.null(gene_id)) {
+        ids <- strsplit(input$gene_select_button, '~')[[1]]
+        gene_id$ds <- ids[2]
+        gene_id$id <- ids[3]
+      }
+
     })
 
     disable("save")
@@ -303,7 +305,6 @@ tmodBrowserPlotServer <- function(id, selmod, tmod_dbs, cntr, tmod_map=NULL, tmo
         dev.off()
       }
     )
-    gene_id
   })
 }
 
