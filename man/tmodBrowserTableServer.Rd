@@ -5,9 +5,15 @@
 \alias{tmodBrowserTableServer}
 \title{Shiny Module – tmod results browser table selection}
 \usage{
-tmodBrowserTableUI(id, cntr_titles)
+tmodBrowserTableUI(id, cntr_titles, upset_pane = FALSE)
 
-tmodBrowserTableServer(id, tmod_res, gs_id = NULL, multilevel = FALSE)
+tmodBrowserTableServer(
+  id,
+  tmod_res,
+  gs_id = NULL,
+  multilevel = FALSE,
+  tmod_dbs = NULL
+)
 }
 \arguments{
 \item{id}{identifier for the namespace of the module}
@@ -23,6 +29,10 @@ reactive values will be populated, possibly triggering an action in
 another shiny module.}
 
 \item{multilevel}{if TRUE, the results are grouped in data sets}
+
+\item{tmod_dbs}{list of lists of tmod database objects (or list of lists
+of list of tmod database object in multilevel mode). If NULL, upset
+plots cannot be generated.}
 }
 \description{
 Shiny Module – tmod results browser table selection

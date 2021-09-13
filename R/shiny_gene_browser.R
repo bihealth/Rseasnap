@@ -15,6 +15,19 @@
   return(cntr) 
 }
 
+.apply_annot_linkout <- function(.x, annot_linkout) {
+
+  for(n in intersect(colnames(.x), names(annot_linkout))) {
+    fmt <- sprintf('<a href="%s" target="_blank">%%s</a>', annot_linkout[[n]])
+    .x[[n]] <- ifelse(
+                      is.na(.x[[n]]) | .x[[n]] == "", 
+                      .x[[n]], 
+                      sprintf(fmt, .x[[n]], .x[[n]]))
+  }
+
+  return(.x)
+}
+
 ## this function runs the preparation for a single dataset
 .gene_browser_prep_res_single <- function(ds_id, cntr, but, annot, annot_linkout, primary_id) {
   cntr   <- cntr %>% 
@@ -24,16 +37,7 @@
         relocate(all_of(">"), .before=1) %>% arrange(pvalue)})
 
   if(!is.null(annot_linkout)) {
-    cntr <- map(cntr, ~ {
-                         for(n in names(annot_linkout)) {
-                           fmt <- sprintf('<a href="%s" target="_blank">%%s</a>', annot_linkout[[n]])
-                           .x[[n]] <- ifelse(
-                                             is.na(.x[[n]]) | .x[[n]] == "", 
-                                             .x[[n]], 
-                                             sprintf(fmt, .x[[n]], .x[[n]]))
-                         }
-                         .x
-    })
+    cntr <- map(cntr, ~ .apply_annot_linkout(.x, annot_linkout))
   }
 
   return(cntr)
@@ -287,7 +291,7 @@ geneBrowserTableServer <- function(id, cntr, annot, annot_linkout=NULL,
       }
 
       res %>% datatable(escape=FALSE, selection='none', extensions="Buttons",
-                options=list(pageLength=5, dom="Bfrtip", scrollX=TRUE, buttons=c("copy", "csv", "excel"))) %>%
+                options=list(pageLength=5, dom="Bfrtip", scrollX=TRUE)) %>%
         formatSignif(columns=intersect(colnames(res), 
                                        c("baseMean", "log2FoldChange", "pvalue", "padj")), digits=2)
     })

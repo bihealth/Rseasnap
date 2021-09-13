@@ -121,7 +121,7 @@ helpUI <- function() {
     t2 <- tabItem("tmod_browser",
        box(title="Gene set enrichment overview", width=12, status="primary",
            collapsible=TRUE,
-           solidHeader=TRUE, tmodBrowserTableUI("tmodT", cntr_titles)),
+           solidHeader=TRUE, tmodBrowserTableUI("tmodT", cntr_titles, upset_pane=TRUE)),
        box(title="Evidence plot", width=12, status="primary",
            collapsible=TRUE,
            solidHeader=TRUE, tmodBrowserPlotUI("tmodP"))
@@ -331,7 +331,8 @@ pipeline_browser <- function(pip, title="Workflow output explorer",
 
     discoServer("disco", data[["cntr"]], data[["annot"]], gene_id=gene_id)
 
-    tmodBrowserTableServer("tmodT", data[["tmod_res"]], gs_id=gs_id, multilevel=TRUE)
+    tmodBrowserTableServer("tmodT", data[["tmod_res"]], gs_id=gs_id, 
+                           multilevel=TRUE, tmod_dbs=data[["tmod_dbs"]])
     tmodPanelPlotServer("panelP", cntr    =data[["cntr"]], 
                                   tmod_res=data[["tmod_res"]],
                                   tmod_dbs=data[["tmod_dbs"]], 
@@ -352,7 +353,10 @@ pipeline_browser <- function(pip, title="Workflow output explorer",
     })
  
     geneBrowserPlotServer("geneP", gene_id, covar=data[["covar"]], 
-                          exprs=data[["rld"]], annot=data[["annot"]], cntr=data[["cntr"]])
+                          exprs=data[["rld"]], annot=data[["annot"]], 
+                          annot_linkout=data[["annot_linkout"]],
+                          cntr=data[["cntr"]]
+    )
   }
 
   shinyApp(ui, server)

@@ -24,7 +24,8 @@
       offset=1),
       fluidRow(downloadButton(NS(id, "save"), "Save plot to PDF", class="bg-success")),
       fluidRow(textOutput(NS(id, "addInfo"))),
-      fluidRow(verbatimTextOutput(NS(id, "geneData")))
+      fluidRow(h3("Additional info:")),
+      fluidRow(tableOutput(NS(id, "geneData")))
     )
 
 
@@ -98,7 +99,8 @@ geneBrowserPlotUI <- function(id, contrasts=FALSE) {
 #' }
 #' @export
 geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NULL, 
-                                  primary_id="PrimaryID", symbol_col="SYMBOL", description_col="GENENAME") {
+                                  primary_id="PrimaryID", symbol_col="SYMBOL", description_col="GENENAME", 
+                                  annot_linkout=NULL) {
 ## XXX make checks
 # stopifnot(is.reactive(gene_id))
 # stopifnot(!is.reactive(covar))
@@ -119,9 +121,9 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
     message("geneBrowserPlotServer in multilevel mode")
   }
 
+  ## vector holding the names of all datasets
   datasets        <- names(covar)
   names(datasets) <- datasets
-
 
   moduleServer(id, function(input, output, session) {
     disable("save")
@@ -165,54 +167,50 @@ geneBrowserPlotServer <- function(id, gene_id, covar, exprs, annot=NULL, cntr=NU
     )
  
     # Show a turbo card for a gene
-    output$geneData <- renderText({
+    output$geneData <- renderTable({
       if(!isTruthy(ds()) || !isTruthy(g_id())) {
         return(NULL)
       }
  
-      ret <- sprintf("%s: %s", primary_id, g_id())
-      if(!is.null(annot[[ ds() ]])) {
- 
+      if(is.null(annot[[ ds() ]])) {
+        ret <- data.frame(V1=primary_id, V2=g_id())
+      } else {
         m <- match(g_id(), annot[[  ds()  ]][[ primary_id ]])
- 
-        if(!is.null(symbol_col)) {
-          ret <- paste0(ret,
-                       sprintf("\nSymbol: %s",
-                               annot[[  ds()  ]][m, ][[symbol_col]])) 
+        ret <- annot[[ ds() ]][ m, , drop=FALSE ]
+
+        if(!is.null(annot_linkout)) {
+          ret <- .apply_annot_linkout(ret, annot_linkout[[ ds() ]])
         }
-        if(!is.null(description_col)) {
-          ret <- paste0(ret, 
-                        sprintf("\nDescription: %s",
-                                annot[[  ds()  ]][m, ][[description_col]]))
-        }
+
+        ret <- data.frame(V1=colnames(ret), V2=t(ret))
       }
+
+      colnames(ret) <- NULL
       return(ret)
-    })
-#
+    }, sanitize.text.function = function(x) x)
+
     ## summary contrasts table
-    observe({
-      if(!isTruthy(ds()) || !isTruthy(g_id())) {
+    output$contr_sum <- DT::renderDataTable({
+      if(!isTruthy(ds()) || !isTruthy(g_id()) || is.null(cntr[[ ds() ]])) {
         return(NULL)
       }
-      if(!is.null(cntr[[ ds() ]])) {
-        output$contr_sum <- DT::renderDataTable({
-          cn <- names(cntr[[ ds() ]])
-          res <- imap_dfr(cntr[[ ds() ]], ~ .x %>% 
-                          filter(.data[[ primary_id ]] == g_id()) %>% 
-                      mutate(contrast=.y))
-          res <- imap_dfr(cntr, ~ {
-                            .ds <- .y
-                            imap_dfr(.x, ~ {
-                                       .x %>% filter(.data[[ primary_id ]] == g_id()) %>%
-                                         mutate("Data set"=.ds, Contrast=.y)
-                            })
-                      })
+      cn <- names(cntr[[ ds() ]])
+      res <- imap_dfr(cntr[[ ds() ]], ~ .x %>% 
+                      filter(.data[[ primary_id ]] == g_id()) %>% 
+                  mutate(contrast=.y))
+      res <- imap_dfr(cntr, ~ {
+                        .ds <- .y
+                        imap_dfr(.x, ~ {
+                                   .x %>% filter(.data[[ primary_id ]] == g_id()) %>%
+                                     mutate("Data set"=.ds, Contrast=.y)
+                        })
+                  })
  
-          numcol <- map_lgl(res, is.numeric)
-          res %>% datatable(escape=FALSE, selection='none', options=list(pageLength=5)) %>%
-            formatSignif(columns=colnames(res)[numcol], digits=2)
-        })
-    }})
+      res <- res %>% relocate(all_of(c("Data set", "Contrast")))
+      numcol <- map_lgl(res, is.numeric)
+      res %>% datatable(escape=FALSE, selection='none', options=list(pageLength=5)) %>%
+        formatSignif(columns=colnames(res)[numcol], digits=2)
+    })
  
     ## Additional information - e.g. correlation coefficient if the
     ## covariate is numeric
