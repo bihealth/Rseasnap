@@ -146,10 +146,8 @@ volcanoServer <- function(id, cntr, lfc_col="log2FoldChange", pval_col="padj",
 
     observeEvent(input$plot_brush, {
       .df <- dfvar()
-      np <- brushedPoints(.df, input$plot_hover)
+      np <- brushedPoints(.df, input$plot_brush)
       selected_genes(np)
-      #selected_genes(np[ , primary_id, drop=FALSE ])
-
     })
 
     observeEvent(input$plot_click, {
