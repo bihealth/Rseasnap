@@ -46,6 +46,8 @@ symbols; use NULL if no such column}
 
 \item{description_col}{name of the column in \code{annot} which contains the gene
 title / description; use NULL if no such column}
+
+\item{annot_linkout}{a list; see Details.}
 }
 \value{
 does not return anything useful
@@ -60,6 +62,13 @@ update the plot accordingly.
 
 In contrast, other parameters must not be reactive values. This may
 change in future to allow for dynamic exchange of data sets.
+
+The parameter \code{annot_linkout} is a named list. Names must correspond to
+columns from the annotation data frame. The elements of the list are
+character strings containing URLs with the \verb{\%s} placeholder. For
+example, if the column \code{ENSEMBL} contains ENSEMBL identifiers, you can
+link out by specifying\preformatted{annot_linkout=list(ENSEMBL="https://www.ensembl.org/id/\%s")
+}
 }
 \examples{
 if(interactive()) {

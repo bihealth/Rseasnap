@@ -74,7 +74,8 @@ helpUI <- function() {
          id = "navid",
          tipify(menuItem("Gene browser",  tabName = "gene_browser", icon = icon("dna")),
                 "Browse genes and view gene expression", placement="right"),
-         tipify(menuItem("Volcano plots",  tabName = "volcano_plots", icon = icon("caret-square-down")),
+         tipify(menuItem("Volcano plots",  tabName = "volcano_plots", icon = icon("mountain",
+                                                                                  class="fa-rotate-180")),
                 "Browse genes and view gene expression", placement="right"),
          tipify(menuItem("Tmod browser",  tabName = "tmod_browser", icon = icon("project-diagram")),
                 "Browse gene set enrichments", placement="right"),
@@ -104,7 +105,8 @@ helpUI <- function() {
   covar       <- data[["covar"]]
 
       t1 <- tabItem("gene_browser",
-         box(title="Gene table", width=12, status="primary", 
+         box(title=p("Gene table ", icon("question-circle")),
+                     width=12, status="primary", 
              collapsible=TRUE,
              solidHeader=TRUE, geneBrowserTableUI("geneT", cntr_titles)),
          box(title="Gene info",  width=12, status="primary", 

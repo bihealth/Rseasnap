@@ -20,6 +20,8 @@ tmodBrowserTableServer(
 
 \item{cntr_titles}{possibly named character vector with contrast names}
 
+\item{upset_pane}{if TRUE, UI for the upset plot will be created}
+
 \item{tmod_res}{results of tmod analysis, returned by \code{get_tmod_res}}
 
 \item{gs_id}{a list of reactive values (returned by \code{reactiveValues()}), including

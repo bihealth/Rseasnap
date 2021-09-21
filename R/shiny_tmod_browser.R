@@ -43,27 +43,67 @@ tmodBrowserTableUI <- function(id, cntr_titles, upset_pane=FALSE) {
                        tabPanel("Results", 
                                 column(dataTableOutput(NS(id, "tmodResTab")), width=12)),
                        tabPanel("Upset plot", 
+                                fluidRow(
+                                         column(width=3,
+                                                selectInput(NS(id, "upset_value"), "Plot type",
+                                                               choices=c("Number", "Soerensen", "Overlap", "Jaccard"))),
+#                                        column(width=3,
+#                                               selectInput(NS(id, "upset_group_stat"), "Find groups by",
+#                                                              choices=c("Soerensen", "Overlap", "Jaccard"), 
+#                                                              selected="Jaccard")),
+                                         column(width=2,
+                                                numericInput(NS(id, "upset_min_size"), "Min. gene sets",
+                                                               min=1, max=0, value=2)),
+                                         column(width=3,
+                                                figsizeInput(NS(id, "upset_fig_size"), "Figure size", selected="800x600"))
+                                                
+                                         ),
                                 fluidRow(plotOutput(NS(id, "upset_plot"), height="100%")))
                      )
   } else {
     main_pane <- column(dataTableOutput(NS(id, "tmodResTab")), width=12)
   }
 
+  tips <- list(
+               auc = "Filter by effect size (area under curve).
+                      Values above 0.85 indicate a strong enrichment. Values below 
+                      0.65 indicate a weak enrichment. Values 0.5 indicate no enrichment."
+                      )
+
 
   ui <- sidebarLayout(
           sidebarPanel(
-           fluidRow(selectInput(NS(id, "contrast"), label="Contrast", choices=cntr_titles, width="100%")),
+           fluidRow(column(
+                           tipify(selectInput(NS(id, "contrast"), label="Contrast", 
+                                             choices=cntr_titles, width="100%"),
+                                  "Select for which contrast the results should be shown"),
+                           width=12)),
            fluidRow(
-                    column(uiOutput(NS(id, "table_sel_db")), width=6),
-                    column(uiOutput(NS(id, "table_sel_sort")), width=6)
+                    column(tipify(uiOutput(NS(id, "table_sel_db")), 
+                                  "Select gene set database to show"), width=6),
+                    column(tipify(uiOutput(NS(id, "table_sel_sort")), 
+                                  "Select sorting order to show"), width=6)
                     ),
            fluidRow(
-             checkboxInput(NS(id, "filter"), label="Filter results", value=TRUE),
+             tipify(checkboxInput(NS(id, "filter"), label="Filter results", value=TRUE),
+                    "Whether or not the tmod results should be filtered"),
              fluidRow(
-                      column(numericInput(NS(id, "f_auc"),  label="Filter by AUC", 
-                          min=.5, max=1.0, step=0.1, value=0.65, width="50%"), width=6),
-                      column(numericInput(NS(id, "f_pval"), label="Filter by FDR", 
-                          min=0, max=1.0, step=0.1, value=0.05, width="50%"), width=6)
+                      column(
+                             tipify(numericInput(NS(id, "f_auc"),  label="Filter by AUC", 
+                          min=.5, max=1.0, step=0.1, value=0.65, width="50%"), 
+                                    tips$auc),
+                             tipify(numericInput(NS(id, "n_min"), label="Min. gene set size",
+                                                 min=1, step=5, value=5, width="50%"),
+                                    "Only show gene sets with at least this number of genes"),
+                             width=6),
+                      column(
+                             tipify(numericInput(NS(id, "f_pval"), label="Filter by FDR", 
+                          min=1, max=1.0, step=0.1, value=0.05, width="50%"), 
+                                    "Filter by adjusted p-value"), 
+                             tipify(numericInput(NS(id, "n_max"), label="Max. gene set size",
+                                                 min=0, step=5, value=0, width="50%"),
+                      "Only show gene sets with at most this number of genes (0 for no limit)"),
+                             width=6)
              )
            ),
            HTML(paste("Click on the", as.character(but), "buttons to view an evidence plot")),
@@ -94,6 +134,7 @@ tmodBrowserTableUI <- function(id, cntr_titles, upset_pane=FALSE) {
 #' of list of tmod database object in multilevel mode). If NULL, upset
 #' plots cannot be generated.
 #' @param multilevel if TRUE, the results are grouped in data sets
+#' @param upset_pane if TRUE, UI for the upset plot will be created
 #' @export
 tmodBrowserTableServer <- function(id, tmod_res, gs_id=NULL, multilevel=FALSE, tmod_dbs=NULL) {
 
@@ -115,9 +156,13 @@ tmodBrowserTableServer <- function(id, tmod_res, gs_id=NULL, multilevel=FALSE, t
                    if(input$filter) {
                      enable("f_auc")
                      enable("f_pval")
+                     enable("n_max")
+                     enable("n_min")
                    } else {
                      disable("f_auc")
                      disable("f_pval")
+                     disable("n_max")
+                     disable("n_min")
                    }
     })
 
@@ -142,10 +187,15 @@ tmodBrowserTableServer <- function(id, tmod_res, gs_id=NULL, multilevel=FALSE, t
       .res <- tmod_res[[dataset()]][[contrast()]][[input$db]][[input$sort]] 
       
       if(input$filter) {
-        .res <- .res %>%
-        filter(.data[["AUC"]] > input$f_auc & .data[["adj.P.Val"]] < input$f_pval)
+        .res <- .res %>% 
+          filter(.data[["AUC"]] > input$f_auc & .data[["adj.P.Val"]] < input$f_pval)
+        if(isTruthy(input$n_min)) {
+          .res <- .res %>% filter(.data[["N1"]] > input$n_min)
+        }
+        if(isTruthy(input$n_max) && input$n_max > 0) {
+          .res <- .res %>% filter(.data[["N1"]] < input$n_max)
+        }
       }
-      mf("res are changing, %d gene sets", nrow(.res))
 
       res(list(
                db=input$db,
@@ -156,20 +206,47 @@ tmodBrowserTableServer <- function(id, tmod_res, gs_id=NULL, multilevel=FALSE, t
 
     })
 
-    output$upset_plot <- renderPlot({
-      if(is.null(.res <- res())) { return(NULL) }
-      if(is.null(tmod_dbs[[.res$ds]])) { return(NULL) }
-      modules <- .res$res$ID
-      mset    <- tmod_dbs[[.res$ds]][[.res$db]]$dbobj
-      if(length(mset) < 2) {
-        stop("Too few gene sets in the result list to show an upset plot")
-      }
-     #if(length(mset) > 50) {
-     #  stop("Too many gene sets, use filter to make it smaller than 50")
-     #}
+    fig_size <- reactiveValues()
 
-      upset(modules, mset)
-    }, width=800, height=800)
+    observeEvent(input$upset_fig_size, {
+      fig_size$width <-
+        as.numeric(gsub(" *([0-9]+) *x *([0-9]+)", "\\1", input$upset_fig_size))
+
+      fig_size$height <- 
+        as.numeric(gsub(" *([0-9]+) *x *([0-9]+)", "\\2", input$upset_fig_size))
+    })
+
+    observe({
+      output$upset_plot <- renderPlot({
+        if(is.null(.res <- res())) { return(NULL) }
+        if(is.null(tmod_dbs[[.res$ds]])) { return(NULL) }
+        modules <- .res$res$ID
+        mset    <- tmod_dbs[[.res$ds]][[.res$db]]$dbobj
+
+        if(length(mset) < 2) {
+          stop("Too few gene sets in the result list to show an upset plot")
+        }
+       #if(length(mset) > 50) {
+       #  stop("Too many gene sets, use filter to make it smaller than 50")
+       #}
+
+        if(!isTruthy(.value <- input$upset_value)) {
+          .value <- "number"
+        }
+
+        if(!isTruthy(.group_stat <- input$upset_group_stat)) {
+          .group_stat <- "jaccard"
+        }
+
+        if(!isTruthy(.min_size <- input$upset_min_size)) {
+          .min_size <- 2
+        }
+
+        upset(modules, mset, 
+              min.size=.min_size,
+              value=tolower(.value), group.stat=tolower(.group_stat))
+      }, width=fig_size$width, height=fig_size$height)
+    })
 
     output$tmodResTab <- renderDataTable({
       if(!isTruthy(res())) { return(NULL) }

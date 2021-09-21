@@ -5,7 +5,7 @@
 \alias{tmodPanelPlotServer}
 \title{Shiny module displaying tmod panel plots}
 \usage{
-tmodPanelPlotUI(id, ds_titles = NULL)
+tmodPanelPlotUI(id, datasets = NULL)
 
 tmodPanelPlotServer(
   id,
@@ -20,7 +20,7 @@ tmodPanelPlotServer(
 \arguments{
 \item{id}{Module ID}
 
-\item{ds_titles}{if there are multiple data sets, this character vector
+\item{datasets}{if there are multiple data sets, this character vector
 defines what they are to show an approppriate selector in the UI}
 
 \item{cntr}{list of data frames with the results of differential

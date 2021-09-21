@@ -43,57 +43,12 @@
   return(cntr)
 }
 
-## Wrapper around plot_gene, mainly to replace "N/A" with NA
-.gene_browser_plot <- function(covar, id, covarName, rld, annot, 
-                               groupBy = "N/A", colorBy = "N/A", symbolBy = "N/A", trellisBy="N/A") {
-  .args <- list(id=id, xCovar=covarName, covar=covar, exprs=rld, groupBy=groupBy, annot=annot,
-                colorBy=colorBy, symbolBy=symbolBy, trellisBy=trellisBy)
-  ## weirdly, the line below is really, really slow
-  #.args <- map(.args, ~ if(!is.na(.x) && .x == "N/A") { NA } else { .x })
-  if(.args$groupBy == "N/A") .args$groupBy <- NA
-  if(.args$colorBy == "N/A") .args$colorBy <- NA
-  if(.args$symbolBy == "N/A") .args$symbolBy <- NA
-  if(.args$trellisBy == "N/A") .args$trellisBy <- NA
-  #plot_gene(pip, id, xCovar=covarName, covar=covar, rld=rld, groupBy=groupBy, colorBy=colorBy, symbolBy=symbolBy)
-  do.call(plot_gene_generic, .args)
-}
 
-.default_covar <- function(covar, all_covars, default="group") {
-  interesting_covars <- covar %>% 
-      summary_colorDF() %>% 
-      filter(unique < n()) %>% 
-      pull(.data$Col)
 
-  if(default %in% interesting_covars) {
-    default_covar <- default
-  } else {
-    if(length(interesting_covars) > 0) {
-      default_covar <- interesting_covars[1]
-    } else {
-      default_covar <- all_covars[1]
-    }
-  }
 
-  return(default_covar)
-}
 
-## prepare the additional gene info tab panel
-.gene_browser_info_tab <- function(id, x, y, covar) {
-     ret <- ""
 
-     if(is.numeric(x)) {
-       pearson.test  <- cor.test(x, y, use="p")
-       spearman.test <- cor.test(x, y, use="p", method="s")
-       ret <- paste0(ret,
-         sprintf("Correlation: r=%.2f [p = %s], rho=%.2f [p = %s]",
-                 pearson.test$estimate,
-                 format.pval(pearson.test$p.value, digits=2),
-                 spearman.test$estimate,
-                 format.pval(spearman.test$p.value, digits=2)))
-     }
-     return(ret)
-}
-
+## prepares IDs/titles of the contrasts for use with the UI
 .prep_cntr_titles <- function(cntr_titles) {
 
   if(is.list(cntr_titles)) {
@@ -123,14 +78,25 @@ geneBrowserTableUI <- function(id, cntr_titles) {
   but <- actionButton("foo", label=" \U25B6 ", class = "btn-primary btn-sm")
   sidebarLayout(
     sidebarPanel(
-        fluidRow(selectInput(NS(id, "contrast"), label = "Contrast", choices = cntr_titles, width="100%")),
+        fluidRow(
+                 tipify(selectInput(NS(id, "contrast"), label = "Contrast", choices = cntr_titles, width="100%"),
+                        "Choose the contrast to show in the table", placement="right")
+                        ),
         fluidRow(
                  column(6,
-                 checkboxInput(NS(id, "filter"), "Filter", TRUE, width="100%"),
-                 numericInput(NS(id, "f_lfc"),    label="Filter by abs(LFC)", min=0, value=0.5, step=.1, width="100%"),
-                 numericInput(NS(id, "f_pval"),    label="Filter by FDR", min=0, max=1.0, value=0.05, step=.1, width="100%")), column(6,
-                 selectInput(NS(id, "f_dir"), label="Direction", choices=c(Any="an", Up="up", "Down"="dw"), 
-                             width="100%")
+                 tipify(checkboxInput(NS(id, "filter"), "Filter", TRUE, width="100%"),
+                        "Choose whether the output should be filtered"),
+                 tipify(numericInput(NS(id, "f_lfc"),    label="Filter by abs(LFC)", min=0, value=0.5, step=.1, width="100%"),
+                        "Show only genes which have an absolute log fold change greater than this value"),
+                 tipify(numericInput(NS(id, "f_pval"),    label="Filter by FDR", min=0, max=1.0, value=0.05, step=.1, width="100%"),
+                        "Show only genes which have a p-value smaller than this value")
+                        ), 
+
+                 column(6,
+                 tipify(
+                 selectInput(NS(id, "f_dir"), label="Direction", choices=c(Any="any", Up="up", "Down"="dw"), 
+                             width="100%"),
+                        "Show only genes with log fold change greater or smaller than 0", placement="right")
                  )),
       tagList(
         HTML(paste("Click on the", but, "buttons to view an expression profile<br/>"))

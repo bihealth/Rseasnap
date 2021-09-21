@@ -12,8 +12,10 @@ volcanoUI <- function(id, datasets=NULL, lfc_thr=1, pval_thr=.05) {
   } else {
     .ds <- c("_all", datasets)
     names(.ds) <- c("All datasets", datasets)
-    ds_selector <- selectInput(NS(id, "dataset"), "Dataset:", 
-                               .ds, selected=.ds[1])
+    ds_selector <- tipify(
+                          selectInput(NS(id, "dataset"), "Dataset:", 
+                               .ds, selected=.ds[1]),
+                          "Choose the dataset to show (use \"all\" to show all data sets")
   }
 
   sidebarLayout(
@@ -29,9 +31,14 @@ volcanoUI <- function(id, datasets=NULL, lfc_thr=1, pval_thr=.05) {
         bsTooltip(NS(id, "lfc_thr"), "Log2 Fold Change threshold for significant genes")) 
       ),
       fluidRow(column(width=12, 
-        checkboxInput(NS(id, "samescale"), "Same scale for all plots",
+        tipify(checkboxInput(NS(id, "samescaleX"), "Same X scale for all plots",
           value=TRUE, width="100%"),
-        bsTooltip(NS(id, "samescale"), "If checked, the scale will be identical on all plots") 
+               "If checked, the X axis will be identical on all plots"),
+                      )),
+      fluidRow(column(width=12, 
+        tipify(checkboxInput(NS(id, "samescaleY"), "Same Y scale for all plots",
+          value=TRUE, width="100%"),
+               "If checked, the y axis will be identical on all plots"),
                       )),
       fluidRow(column(width=6,
                       figsizeInput(NS(id, "figure_size"), width="100%"),
@@ -173,8 +180,13 @@ volcanoServer <- function(id, cntr, lfc_col="log2FoldChange", pval_col="padj",
       df[[ yvar ]] <- -log10(df[[pval_col]])
 
 
-      scales <- ifelse(input$samescale, 
-                       "fixed", "free_y")
+      scales <- ifelse(input$samescaleX, 
+                       ifelse(input$samescaleY,
+                              "fixed",
+                              "free_y"),
+                       ifelse(input$samescaleY,
+                              "free_x",
+                              "free"))
 
       ## store the data frame for click, hover or brush events
       dfvar(df)

@@ -1,3 +1,56 @@
+## prepare the additional gene info tab panel
+.gene_browser_info_tab <- function(id, x, y, covar) {
+     ret <- ""
+
+     if(is.numeric(x)) {
+       pearson.test  <- cor.test(x, y, use="p")
+       spearman.test <- cor.test(x, y, use="p", method="s")
+       ret <- paste0(ret,
+         sprintf("Correlation: r=%.2f [p = %s], rho=%.2f [p = %s]",
+                 pearson.test$estimate,
+                 format.pval(pearson.test$p.value, digits=2),
+                 spearman.test$estimate,
+                 format.pval(spearman.test$p.value, digits=2)))
+     }
+     return(ret)
+}
+
+.default_covar <- function(covar, all_covars, default="group") {
+  interesting_covars <- covar %>% 
+      summary_colorDF() %>% 
+      filter(unique < n()) %>% 
+      pull(.data$Col)
+
+  if(default %in% interesting_covars) {
+    default_covar <- default
+  } else {
+    if(length(interesting_covars) > 0) {
+      default_covar <- interesting_covars[1]
+    } else {
+      default_covar <- all_covars[1]
+    }
+  }
+
+  return(default_covar)
+}
+
+
+## Wrapper around plot_gene, mainly to replace "N/A" with NA
+.gene_browser_plot <- function(covar, id, covarName, rld, annot, 
+                               groupBy = "N/A", colorBy = "N/A", symbolBy = "N/A", trellisBy="N/A") {
+  .args <- list(id=id, xCovar=covarName, covar=covar, exprs=rld, groupBy=groupBy, annot=annot,
+                colorBy=colorBy, symbolBy=symbolBy, trellisBy=trellisBy)
+  ## weirdly, the line below is really, really slow
+  #.args <- map(.args, ~ if(!is.na(.x) && .x == "N/A") { NA } else { .x })
+  if(.args$groupBy == "N/A") .args$groupBy <- NA
+  if(.args$colorBy == "N/A") .args$colorBy <- NA
+  if(.args$symbolBy == "N/A") .args$symbolBy <- NA
+  if(.args$trellisBy == "N/A") .args$trellisBy <- NA
+  #plot_gene(pip, id, xCovar=covarName, covar=covar, rld=rld, groupBy=groupBy, colorBy=colorBy, symbolBy=symbolBy)
+  do.call(plot_gene_generic, .args)
+}
+
+
 
 .dynamic_col_control <- function(id, covar, datasets, ds_selected) {
 
@@ -13,16 +66,25 @@
   tagList(
       fluidRow(ds_selector),
       column(width=5, 
-      fluidRow(selectInput(NS(id, "covarName"), "X covariate", non_unique, selected=default_covar, width="100%")),
-      fluidRow(selectInput(NS(id, "colorBy"), "Color by", c("N/A", non_unique), selected="N/A", width="100%")),
-      fluidRow(selectInput(NS(id, "symbolBy"), "Symbol by", c("N/A", non_unique), selected="N/A", width="100%")),
+      fluidRow(
+               tipify(selectInput(NS(id, "covarName"), "X covariate", non_unique, selected=default_covar, width="100%"),
+                      "Variable shown on the X axis", placement="right")),
+      fluidRow(
+               tipify(selectInput(NS(id, "colorBy"), "Color by", c("N/A", non_unique), selected="N/A", width="100%"),
+                      "Variable coded as color", placement="right")),
+      fluidRow(
+               tipify(selectInput(NS(id, "symbolBy"), "Symbol by", c("N/A", non_unique), selected="N/A", width="100%"),
+                      "Variable coded as symbol", placement="right")),
       ),
       column(width=5,
-      fluidRow(selectInput(NS(id, "groupBy"), "Link data points by", c("N/A", non_unique), selected="N/A", width="100%")),
-      fluidRow(selectInput(NS(id, "trellisBy"), "Trellis by", c("N/A", non_unique), selected="N/A", width="100%")),
-      fluidRow(numericInput(NS(id, "fontSize"),    label="Font size", min=6, value=14, step=1, width="50%")),
+      fluidRow(
+               tipify(selectInput(NS(id, "groupBy"), "Link data points by", c("N/A", non_unique), selected="N/A", width="100%"),
+                      "Points with identical values will be linked by a line", placement="right")),
+      fluidRow(tipify(selectInput(NS(id, "trellisBy"), "Trellis by", c("N/A", non_unique), selected="N/A", width="100%"),
+                      "Each unique value of the variable will be shown on a separate subplot", placement="right")),
+      fluidRow(tipify(numericInput(NS(id, "fontSize"),    label="Font size", min=6, value=14, step=1, width="50%"),
+                      "Change the base font size of the figure", placement="right")),
       offset=1),
-      fluidRow(downloadButton(NS(id, "save"), "Save plot to PDF", class="bg-success")),
       fluidRow(textOutput(NS(id, "addInfo"))),
       fluidRow(h3("Additional info:")),
       fluidRow(tableOutput(NS(id, "geneData")))
@@ -38,17 +100,23 @@ geneBrowserPlotUI <- function(id, contrasts=FALSE) {
     sidebarPanel(
                  uiOutput(NS(id, "col_control"))
                  )
+  plot_ui <- 
+      fluidRow(column(width=1, 
+                      tipify(downloadButton(NS(id, "save"), "PDF", class="bg-success"),
+                             "Save as PDF")),
+               column(width=11,
+                      withSpinner(plotOutput(NS(id, "countsplot")))))
 
   if(contrasts) {
     return(sidebarLayout(col_control,
       mainPanel(
       column(9, style="padding:20px;", tabsetPanel(
-      tabPanel("Plot", fluidRow(br(), plotOutput(NS(id, "countsplot")))),
+      tabPanel("Plot", fluidRow(br(), plot_ui)),
       tabPanel("Contrast overview", fluidRow(br(), dataTableOutput(NS(id, "contr_sum"))))
       )))))
   } else {
     return(col_control,
-      mainPanel(withSpinner(plotOutput(NS(id, "countsplot")))))
+      mainPanel(plot_ui))
   }
 
 }
@@ -63,6 +131,17 @@ geneBrowserPlotUI <- function(id, contrasts=FALSE) {
 #' 
 #' In contrast, other parameters must not be reactive values. This may
 #' change in future to allow for dynamic exchange of data sets.
+#'
+#' The parameter `annot_linkout` is a named list. Names must correspond to
+#' columns from the annotation data frame. The elements of the list are
+#' character strings containing URLs with the `%s` placeholder. For
+#' example, if the column `ENSEMBL` contains ENSEMBL identifiers, you can
+#' link out by specifying 
+#'
+#' ```
+#' annot_linkout=list(ENSEMBL="https://www.ensembl.org/id/%s")
+#' ```
+
 #' @param gene_id primary identifier of the gene to show. This must be a
 #'        reactive value
 #' @param primary_id name of the column which holds the primary identifiers
@@ -72,6 +151,7 @@ geneBrowserPlotUI <- function(id, contrasts=FALSE) {
 #'        information for a gene
 #' @param annot (optional) annotation data frame containing column 'PrimaryID'
 #'        corresponding to the rownames of the contrast data frames
+#' @param annot_linkout a list; see Details. 
 #' @param id identifier (same as the one passed to geneBrowserTableUI)
 #' @param covar data frame with all covariates
 #' @param cntr (optional) list of contrasts

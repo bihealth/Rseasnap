@@ -1,14 +1,3 @@
-
-
-
-### res <- tmod_res$Nonclassical_vs_classical_ID0$tmod$pval
-### res <- list(ID1=res)
-### res$ID2 <- tmodCERNOtest(cntr$Nonclassical_vs_classical_ID0$symbol[ order(-abs(cntr$Nonclassical_vs_classical_ID0$log2FoldChange)) ])
-### pie <- tmodDecideTests(cntr$Nonclassical_vs_classical_ID0$symbol, cntr$Nonclassical_vs_classical_ID0$log2FoldChange, cntr$Nonclassical_vs_classical_ID0$padj)
-### pie <- list(ID1=pie)
-### pie$ID1 <- pie$ID1$X.1
-### pie$ID2 <- pie$ID1
-
 #' Create a tmod panel plot using ggplot
 #'
 #' Create a tmod panel plot using ggplot
@@ -128,8 +117,7 @@ mf <- function(x, ...) {
 #' @importFrom shinycssloaders withSpinner
 #' @rdname tmodPanelPlotServer
 #' @export
-tmodPanelPlotUI <- function(id, ds_titles=NULL) {
-  mp(ds_titles)
+tmodPanelPlotUI <- function(id, datasets=NULL) {
 
   ttip <- list(
 
@@ -152,11 +140,18 @@ tmodPanelPlotUI <- function(id, ds_titles=NULL) {
                    "By default, the genes are ordered by the p-value.")
     )
 
-    if(is.null(ds_titles)) {
-      tmp <- ""
-    } else {
-      tmp <- fluidRow(selectInput(NS(id, "dataset"), label="Dataset", choices=ds_titles, width="100%"))
-    }
+  if(is.null(datasets)) {
+    datasets <- "default"
+  }
+
+  
+  if(length(datasets) < 2) {
+    tmp <- hidden(selectInput(NS(id, "dataset"), label="Dataset", choices="default", width="100%"))
+  } else {
+    datasets <- c("_all", datasets)
+    names(datasets) <- c("All datasets", datasets[-1])
+    tmp <- fluidRow(selectInput(NS(id, "dataset"), label="Dataset", choices=datasets, width="100%"))
+  }
 
     sidebarLayout(
       sidebarPanel(
@@ -249,7 +244,7 @@ tmodPanelPlotUI <- function(id, ds_titles=NULL) {
 #' reactive values will be populated, possibly triggering an action in
 #' another shiny module.
 #' @param tmod_dbs named list of tmod databases, see Details.
-#' @param ds_titles if there are multiple data sets, this character vector
+#' @param datasets if there are multiple data sets, this character vector
 #'        defines what they are to show an approppriate selector in the UI
 #' @return Returns a reactive value which is a list with elements
 #' `contrast` and `id`.
@@ -295,16 +290,26 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NU
     message("Launching tmod panelplot server")
     disable("save")
 
-    output$db_field <- renderUI({
-      if(is_single_ds) { .ds <- ds_ids[1] } else { .ds <- input$dataset }
-      dbs <- names(tmod_res[[.ds]][[1]])
-      selectInput(NS(id, "db"),  label="Database", choices=dbs, width="100%")
-    })
+    observeEvent(input$dataset, {
 
-    output$sort_field <- renderUI({
-      if(is_single_ds) { .ds <- ds_ids[1] } else { .ds <- input$dataset }
-      sorting <- names(tmod_res[[.ds]][[1]][[1]])
-      selectInput(NS(id, "sort"),  label="Sorting", choices=sorting, width="100%")
+      if(!is_single_ds) {
+        .ds <- input$dataset
+        if(.ds == "_all") {
+          .ds <- ds_ids[1]
+        }
+      } else {
+        .ds <- ds_ids[1]
+      }
+
+      output$db_field <- renderUI({
+        dbs <- names(tmod_res[[.ds]][[1]])
+        selectInput(NS(id, "db"),  label="Database", choices=dbs, width="100%")
+      })
+
+      output$sort_field <- renderUI({
+        sorting <- names(tmod_res[[.ds]][[1]][[1]])
+        selectInput(NS(id, "sort"),  label="Sorting", choices=sorting, width="100%")
+      })
     })
 
 
@@ -326,14 +331,14 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NU
       .res <- flatten(res())
 
       mf("Saving to file %s", file)
-      pdf(file=file, width=fig_width() / 75, height=fig_height() / 75)
+      pdf(file=file, width=fig_size$width / 75, height=fig_size$height / 75)
       g <- gg_panelplot(.res, pie=.pie, 
                      filter_row_auc=input$filter_auc,
                      filter_row_q=input$filter_pval,
                      label_angle=input$label_angle) + 
                                    theme(text=element_text(size=input$font_size))
 
-        print(g)
+       print(g)
        dev.off()
        message("returning")
      }
@@ -362,7 +367,13 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NU
     res <- reactive({
       if(!(isTruthy(input$db) && isTruthy(input$sort))) { return(NULL) }
 
-      ret <- imap(tmod_res, ~ {
+      if(input$dataset == "_all") {
+        .datasets <- ds_ids
+      } else {
+        .datasets <- input$dataset
+      }
+
+      ret <- imap(tmod_res[.datasets], ~ {
              .ds <- .y
              .res <- .x
              ret <- map(.res, ~ .x[[input$db]][[input$sort]]) 
@@ -403,17 +414,14 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NU
       gs_id$click <-  gs_id$click + 1
     })
 
-    fig_width <- reactiveVal()
-    fig_height <- reactiveVal()
+    fig_size <- reactiveValues()
 
     observeEvent(input$figure_size, {
-      fig_width(
+      fig_size$width <- 
         as.numeric(gsub(" *([0-9]+) *x *([0-9]+)", "\\1", input$figure_size))
-      )
 
-      fig_height(
+      fig_size$height <- 
         as.numeric(gsub(" *([0-9]+) *x *([0-9]+)", "\\2", input$figure_size))
-      )
     })
 
 
@@ -433,7 +441,7 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NU
 
 
       g
-    }, width=fig_width(), height=fig_height()) })
+    }, width=fig_size$width, height=fig_size$height) })
 
 	})
 
@@ -449,7 +457,6 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NU
   #message("Making \U1F967 pie")
 
   names(datasets) <- datasets <- names(tmod_res)
-  mp(datasets)
 
   pie <- map(datasets, ~ {
                ds <- .x
