@@ -146,7 +146,7 @@ tmodPanelPlotUI <- function(id, datasets=NULL) {
 
   
   if(length(datasets) < 2) {
-    tmp <- hidden(selectInput(NS(id, "dataset"), label="Dataset", choices="default", width="100%"))
+    tmp <- hidden(selectInput(NS(id, "dataset"), label="Dataset", choices=datasets, width="100%"))
   } else {
     datasets <- c("_all", datasets)
     names(datasets) <- c("All datasets", datasets[-1])
@@ -353,7 +353,7 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NU
       id       <- unlist(input$plot_hover$domain$discrete_limits$y)[
                                                         round(input$plot_hover$y) ]
 
-      if(dataset != "default") {
+      if(!is_single_ds) {
         ret <- sprintf("Dataset %s, Contrast %s, ID %s. Click to view in tmod browser panel.", 
               dataset, contrast, id)
       } else {
@@ -366,6 +366,7 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NU
     ## prepare the list of tmod results to display
     res <- reactive({
       if(!(isTruthy(input$db) && isTruthy(input$sort))) { return(NULL) }
+      browser()
 
       if(input$dataset == "_all") {
         .datasets <- ds_ids
