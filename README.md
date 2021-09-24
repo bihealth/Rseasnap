@@ -25,22 +25,15 @@ You can install the current version of Rseasnap as follows:
 
 ``` r
 library(devtools)
-install_git(...)
+install_github("bihealth/Rseasnap")
 ```
 
 Alternatively, clone the git repo and install from the clone directory,
 e.g.
 
 ``` r
-system("git clone git@cubi-gitlab.bihealth.org:january.weiner/Rseasnap.git")
+system("git clone git@github.com:bihealth/Rseasnap.git")
 devtools::install_git("Rseasnap")
-
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-library(Rseasnap)
-## basic example code
 ```
+
 
