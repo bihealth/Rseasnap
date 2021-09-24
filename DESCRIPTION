@@ -1,6 +1,6 @@
 Package: Rseasnap
 Title: Utilities for the sea-snap pipeline
-Version: 0.2.9
+Version: 0.2.10
 Authors@R: 
     person(given = "January",
            family = "Weiner",
@@ -25,23 +25,17 @@ Imports:
     glue,
     knitr,
     lubridate,
-    plotly,
     purrr,
     tibble,
     tidyr,
     tmod,
     yaml,
     DT,
-    shiny,
     cowplot,
     rlang,
     stats,
     bslib,
-    thematic,
-    shinydashboard,
-    shinyjs,
-    shinyBS,
-    shinycssloaders
+    plotly
 Suggests: 
     rmarkdown,
     S4Vectors
