@@ -366,7 +366,6 @@ tmodPanelPlotServer <- function(id, cntr, tmod_res, tmod_dbs, tmod_map, gs_id=NU
     ## prepare the list of tmod results to display
     res <- reactive({
       if(!(isTruthy(input$db) && isTruthy(input$sort))) { return(NULL) }
-      browser()
 
       if(input$dataset == "_all") {
         .datasets <- ds_ids
