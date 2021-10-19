@@ -34,7 +34,6 @@ Imports:
     cowplot,
     rlang,
     stats,
-    bslib,
     plotly
 Suggests: 
     rmarkdown,
