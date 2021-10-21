@@ -55,12 +55,20 @@ get_contrasts <- function(x, contrasts=NULL) {
 #'
 #' Get counts from the import_gene_counts step
 #' @param x an object of class seasnap_DE_pipeline
-#' @return a matrix with raw counts, rownames corresponding to PrimaryIDs
-#'         and column names corresponding to sample names
+#' @param as_matrix if FALSE, a data frame will be returned
+#' @return either a matrix with raw counts, rownames corresponding to PrimaryIDs
+#'         and column names corresponding to sample names, or data frame
+#'         with first column being the PrimaryIDs
+#' @importFrom utils read.csv
 #' @export
-get_counts <- function(x) {
-  rds <- get_object(x, step="DESeq2", extension="deseq2.rds")
-  rds@assays@data[[1]]
+get_counts <- function(x, as_matrix=TRUE) {
+  cfile <- get_object_path(x, step="export_raw_counts", extension="csv")
+  if(as_matrix) {
+    cnts <- read.csv(cfile, row.names=1)
+    return(as.matrix(cnts))
+  } else {
+    return(read.csv(cfile))
+  }
 }
 
 
