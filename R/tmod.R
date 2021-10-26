@@ -259,6 +259,9 @@ for other gene set IDs for the same database and contrast\n\n"))
 #' @param pval_column Name of the column in contrasts containing the per gene p-values.
 #' @param pval_thr p-value threshold for significant genes
 #' @param lfc_thr log2 FC  threshold for significant genes
+#' @param sort_by sorting key
+#' @param gs_titles named character vector. Names must correspond to gene
+#'        set IDs from the tmod db object
 #' @param ... any further arguments are passed to tmodPanelPlot
 #' @importFrom tmod tmodDecideTests tmodPanelPlot
 #' @importFrom purrr map_dfc
@@ -266,23 +269,22 @@ for other gene set IDs for the same database and contrast\n\n"))
 ##
 #' @export
 plot_tmod_panelplot <- function(x, res, dbname, sel=NULL, contrasts_obj=NULL,
-  annot_obj=NULL, tmod_dbs_obj=NULL,
+  annot_obj=NULL, tmod_dbs_obj=NULL, sort_by="pval",
   lfc_column="log2FoldChange", pval_column="padj",
+  gs_titles=NULL,
   pval_thr=0.05, lfc_thr=1, ...) {
 
   if(is.null(contrasts_obj)) {
     contrasts_obj <- get_contrasts(x)
   }
 
+  res <- map(res, ~ .x[[dbname]][[sort_by]])
+
   stopifnot(all(names(res) %in% names(contrasts_obj)))
 
-  if(!is.null(sel)) {
-    res <- map(res, ~ .x[ .x[["ID"]] %in% sel, ])
-  }
-
-  if(is.null(annot)) { 
-    message("Consider pre-loading annot to speed up this function")
-    annot <- get_annot(x) 
+  if(is.null(annot_obj)) { 
+    message("Consider pre-loading annot_obj to speed up this function")
+    annot_obj <- get_annot(x) 
   }
   if(is.null(tmod_dbs_obj)) { 
     message("Consider pre-loading tmod_dbs_obj to speed up this function")
@@ -291,16 +293,35 @@ plot_tmod_panelplot <- function(x, res, dbname, sel=NULL, contrasts_obj=NULL,
 
   dbobj <- tmod_dbs_obj[[dbname]][["dbobj"]]
 
+  if(!is.null(sel)) {
+    res <- map(res, ~ .x[ .x[["ID"]] %in% sel, ])
+    dbobj <- dbobj[sel]
+  }
+
+  if(!is.null(gs_titles)) {
+    stopifnot(!is.null(names(gs_titles)))
+
+    res <- map(res, ~ {
+
+      .tit <- gs_titles[names(gs_titles) %in% .x$ID ]
+      .x$Title[ match(names(.tit), .x$ID) ] <- .tit
+      .x
+
+    })
+
+  }
+
+
   ## order contrasts by Primary ID
   contrasts_obj <- map(contrasts_obj, ~ {
-    .x <- .x[ annot[["PrimaryID"]], ]
+    .x <- .x[ annot_obj[["PrimaryID"]], ]
   })
 
   lfc  <- map_dfc(contrasts_obj, ~ .x[[lfc_column]])
   pval <- map_dfc(contrasts_obj, ~ .x[[pval_column]])
   pval[is.na(pval)] <- 1
 
-  gl <- tmod_db_map_ids(x, annot[["PrimaryID"]], dbname)
+  gl <- tmod_db_map_ids(x, annot_obj[["PrimaryID"]], dbname)
 
   pie <- tmodDecideTests(gl, lfc=lfc, pval=pval, mset=dbobj, lfc.thr=lfc_thr, pval.thr=pval_thr)
   stopifnot(all(names(res) %in% names(pie)))

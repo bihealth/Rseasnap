@@ -12,8 +12,10 @@ plot_tmod_panelplot(
   contrasts_obj = NULL,
   annot_obj = NULL,
   tmod_dbs_obj = NULL,
+  sort_by = "pval",
   lfc_column = "log2FoldChange",
   pval_column = "padj",
+  gs_titles = NULL,
   pval_thr = 0.05,
   lfc_thr = 1,
   ...
@@ -39,9 +41,14 @@ will be loaded from the pipeline).}
 \item{tmod_dbs_obj}{tmod database object returned by \code{get_tmod_dbs} (if NULL, it
 will be loaded from the pipeline).}
 
+\item{sort_by}{sorting key}
+
 \item{lfc_column}{Name of the column in contrasts containing the per gene log2 fold changes.}
 
 \item{pval_column}{Name of the column in contrasts containing the per gene p-values.}
+
+\item{gs_titles}{named character vector. Names must correspond to gene
+set IDs from the tmod db object}
 
 \item{pval_thr}{p-value threshold for significant genes}
 
