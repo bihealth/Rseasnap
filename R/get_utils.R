@@ -195,6 +195,40 @@ get_config <- function(x) {
   return(x$config)
 }
 
+#' Get the results of tmod_pca
+#'
+#' Get the results of tmod_pca
+#' @param x an object of class seasnap_DE_pipeline
+#' @return data frame with principal components
+#' @export
+get_tmod_pca_res <- function(x) {
+  .check_de_obj(x)
+  step      <- "tmod_pca"
+  extension <- "rds"
+
+  get_object(x, step=step, extension=extension, multiple_ok=FALSE)
+}
+
+
+
+
+
+#' Get the prcomp object produced by tmod_pca
+#'
+#' Get the prcomp object produced by tmod_pca
+#' @param x an object of class seasnap_DE_pipeline
+#' @return data frame with principal components
+#' @export
+get_tmod_pca_prcomp <- function(x) {
+  .check_de_obj(x)
+  step      <- "tmod_pca"
+  extension <- "pca.rds"
+
+  get_object(x, step=step, extension=extension, multiple_ok=FALSE)
+}
+
+
+
 
 
 #' Get the pipeline annotation 

@@ -230,6 +230,32 @@ for other gene set IDs for the same database and contrast\n\n"))
 }
 
 
+#' @param tmod_pca_res results of tmod PCA analysis
+#' @rdname plot_tmod_panelplot
+#' @export
+plot_tmod_pca <- function(x, dbname, type=c("absolute", "directional"), tmod_pca_res=NULL, ...) {
+
+  type <- match.arg(type, c("absolute", "directional"))
+  if(is.null(tmod_pca_res)) {
+    tmod_pca_res <- get_tmod_pca_res(x)
+  }
+
+  stopifnot(dbname %in% names(tmod_pca_res))
+
+  tmod_pca_res <- tmod_pca_res[[dbname]]
+
+  if(type == "absolute") {
+    tmod_pca_res <- map(tmod_pca_res, ~ .x[["abs"]])
+  }
+
+  if(type == "directional") {
+    tmod_pca_res <- map(tmod_pca_res, ~ .x[ names(.x) != "abs" ])
+    tmod_pca_res <- unlist(tmod_pca_res, recursive = FALSE)
+  }
+
+  tmodPanelPlot(tmod_pca_res, ...)
+}
+
 
 #' Create tmod panel plot from pipeline data
 #'
@@ -260,6 +286,7 @@ for other gene set IDs for the same database and contrast\n\n"))
 #' @param pval_thr p-value threshold for significant genes
 #' @param lfc_thr log2 FC  threshold for significant genes
 #' @param sort_by sorting key
+#' @param dotplot if TRUE, only simple dots will be shown
 #' @param gs_titles named character vector. Names must correspond to gene
 #'        set IDs from the tmod db object
 #' @param ... any further arguments are passed to tmodPanelPlot
@@ -271,7 +298,7 @@ for other gene set IDs for the same database and contrast\n\n"))
 plot_tmod_panelplot <- function(x, res, dbname, sel=NULL, contrasts_obj=NULL,
   annot_obj=NULL, tmod_dbs_obj=NULL, sort_by="pval",
   lfc_column="log2FoldChange", pval_column="padj",
-  gs_titles=NULL,
+  gs_titles=NULL, dotplot=FALSE,
   pval_thr=0.05, lfc_thr=1, ...) {
 
   if(is.null(contrasts_obj)) {
@@ -312,19 +339,23 @@ plot_tmod_panelplot <- function(x, res, dbname, sel=NULL, contrasts_obj=NULL,
   }
 
 
+  if(dotplot) {
+    pie <- NULL
+  } else {
   ## order contrasts by Primary ID
-  contrasts_obj <- map(contrasts_obj, ~ {
-    .x <- .x[ annot_obj[["PrimaryID"]], ]
-  })
+    contrasts_obj <- map(contrasts_obj, ~ {
+      .x <- .x[ annot_obj[["PrimaryID"]], ]
+    })
 
-  lfc  <- map_dfc(contrasts_obj, ~ .x[[lfc_column]])
-  pval <- map_dfc(contrasts_obj, ~ .x[[pval_column]])
-  pval[is.na(pval)] <- 1
+    lfc  <- map_dfc(contrasts_obj, ~ .x[[lfc_column]])
+    pval <- map_dfc(contrasts_obj, ~ .x[[pval_column]])
+    pval[is.na(pval)] <- 1
 
-  gl <- tmod_db_map_ids(x, annot_obj[["PrimaryID"]], dbname)
+    gl <- tmod_db_map_ids(x, annot_obj[["PrimaryID"]], dbname)
 
-  pie <- tmodDecideTests(gl, lfc=lfc, pval=pval, mset=dbobj, lfc.thr=lfc_thr, pval.thr=pval_thr)
-  stopifnot(all(names(res) %in% names(pie)))
+    pie <- tmodDecideTests(gl, lfc=lfc, pval=pval, mset=dbobj, lfc.thr=lfc_thr, pval.thr=pval_thr)
+    stopifnot(all(names(res) %in% names(pie)))
+  }
 
   tmodPanelPlot(res, pie=pie, ...)
 }
