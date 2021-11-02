@@ -231,6 +231,7 @@ for other gene set IDs for the same database and contrast\n\n"))
 
 
 #' @param tmod_pca_res results of tmod PCA analysis
+#' @param type can be "absolute" (one enrichment per component) or "directional" (two enrichments per component)
 #' @rdname plot_tmod_panelplot
 #' @export
 plot_tmod_pca <- function(x, dbname, type=c("absolute", "directional"), tmod_pca_res=NULL, ...) {

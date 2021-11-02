@@ -36,6 +36,8 @@ plot_tmod_panelplot(
 
 \item{dbname}{Name of the tmod database from which the results were generated}
 
+\item{type}{can be "absolute" (one enrichment per component) or "directional" (two enrichments per component)}
+
 \item{tmod_pca_res}{results of tmod PCA analysis}
 
 \item{...}{any further arguments are passed to tmodPanelPlot}
