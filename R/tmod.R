@@ -117,6 +117,7 @@ plot_evidence <- function(x, id, dbname, contrast, sort="pval", contrast_obj=NUL
   }
 
   if(is.null(annot_obj)) { annot_obj <- get_annot(x) }
+
   if(length(id) != 1L) {
     stop("id must be of length 1")
   }
