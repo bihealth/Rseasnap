@@ -404,6 +404,35 @@ test_gsea_tmod <- function(x, gl, dbname, tmod_dbs_obj=NULL, tmod_dbs_mapping_ob
   do.call(func, args)
 }
 
+
+#' Fuse all results from a list into one huge data frame
+#'
+#' Fuse all results from a list into one huge data frame
+#'
+#' This function expect a list of an arbitrary depth, and a data frame at
+#' the end of each branch. 
+#' @param x a list (of lists (of lists (of ...)))
+#' @return a data frame with additional columns L0, L1, ...
+#' @importFrom purrr map_dfr
+#' @export 
+biglist <- function(x) {
+ .biglist(x) 
+}
+
+.biglist <- function(x, level=0) {
+  if(is.data.frame(x)) {
+    return(x)
+  }
+  lname <- paste0("L", level)
+
+  imap_dfr(x, ~ {
+      ret <- .biglist(.x, level=level + 1)
+      ret[[lname]] <- .y
+      rownames(ret) <- NULL
+      ret
+    })
+}
+
 #' Produce a tabbed DT results table
 #'
 #' Produce a tabbed DT results table of gene set enrichment test.
