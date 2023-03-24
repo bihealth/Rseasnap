@@ -134,6 +134,18 @@ get_tmod_mapping <- function(x) {
 }
 
 
+#' Get the expression data object
+#'
+#' Get the expression data object created by the DE pipeline
+#' @param x an object of class seasnap_DE_pipeline
+#' @param model if TRUE, model rlog values are returned instead of blind rlog
+#'        values.
+#' @return an object of class DESeq2
+#' @export
+get_exprs <- function(x, model=FALSE) {
+  extension <- ifelse(model, "rld.model.rds", "rld.blind.rds")
+  get_object(x, step="DESeq2", extension=extension, contrast="all", multiple_ok=FALSE)
+}
 #' Get the DESeq2 object
 #'
 #' Get the DESeq2 object created by the DE pipeline
