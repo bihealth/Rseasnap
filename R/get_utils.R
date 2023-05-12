@@ -133,6 +133,27 @@ get_tmod_mapping <- function(x) {
   get_object(x, step="tmod_dbs", extension="mapping.rds", contrast="all", multiple_ok=FALSE)
 }
 
+#' Return the tmod gene list object
+#'
+#' Return the tmod gene list object
+#'
+#' The gene list object holds the gene lists used in the tmod analysis. The
+#' object is a named list corresponding to each contrast. Each element of the
+#' list is a named list corresponding to each tmod database. Each element of
+#' this list is a named character vector. Names of this vector are PrimaryIDs,
+#' and values are the corresponding IDs in the given database.
+#' @param x an object of class seasnap_DE_pipeline
+#' @param contrasts an optional character vector of the contrasts to return
+#' @return tmod gene list object
+#' @seealso [get_tmod_dbs()], [get_tmod_mapping()]
+#' @export
+get_tmod_gene_lists <- function(x, contrasts=NULL) {
+  if(is.null(contrasts)) {
+    contrasts <- get_contrast_names(x)
+  }
+
+  get_object(x, step="tmod", extension="gl.rds", contrast=contrasts, multiple_ok=TRUE)
+}
 
 #' Get the expression data object
 #'
@@ -141,10 +162,11 @@ get_tmod_mapping <- function(x) {
 #' @param model if TRUE, model rlog values are returned instead of blind rlog
 #'        values.
 #' @return an object of class DESeq2
+#' @importFrom SummarizedExperiment assay
 #' @export
 get_exprs <- function(x, model=FALSE) {
   extension <- ifelse(model, "rld.model.rds", "rld.blind.rds")
-  get_object(x, step="DESeq2", extension=extension, contrast="all", multiple_ok=FALSE)
+  assay(get_object(x, step="DESeq2", extension=extension, contrast="all", multiple_ok=FALSE))
 }
 #' Get the DESeq2 object
 #'
@@ -358,6 +380,23 @@ get_extensions <- function(x, steps=NULL) {
   sort(unique(x$file_tab[sel,,drop=FALSE]$extension))
 }
 
+
+#' Principal component analysis
+#'
+#' Principal component analysis
+#'
+#' @param x an object of class seasnap_DE_pipeline
+#' @return an object of class prcomp
+#' @export
+get_pca <- function(x) {
+  .check_de_obj(x)
+  exprs    <- get_exprs(x)
+  mtx <- t(exprs)
+  vars <- order(apply(mtx, 2, var), decreasing=TRUE)
+  sel  <- vars > 1e-26
+  pca <- prcomp(mtx[ , sel], scale.=TRUE)$x
+  return(pca)
+}
 
 
 get_versions <- function(x) {
