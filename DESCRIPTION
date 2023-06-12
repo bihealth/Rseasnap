@@ -1,6 +1,6 @@
 Package: Rseasnap
 Title: Utilities for the sea-snap pipeline
-Version: 0.2.12
+Version: 0.2.14
 Authors@R: 
     person(given = "January",
            family = "Weiner",
@@ -27,15 +27,14 @@ Imports:
     lubridate,
     purrr,
     tibble,
-    tidyr,
     tmod,
     yaml,
     DT,
-    cowplot,
-    rlang,
     stats,
+    SummarizedExperiment,
     plotly
 Suggests: 
     rmarkdown,
+    cowplot,
     S4Vectors
 VignetteBuilder: knitr

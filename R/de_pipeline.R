@@ -44,7 +44,7 @@ print.seasnap_DE_pipeline <- function(x, ...) {
 load_de_pipeline <- function(config_file="DE_config.yaml", config=NULL) {
 
   ret <- list()
-  class(ret) <- c(class(ret), "seasnap_DE_pipeline")
+  class(ret) <- c("seasnap_DE_pipeline", class(ret))
   ret$timestamp <- now()
 
   if(!is.null(config)) {
@@ -108,6 +108,27 @@ load_de_pipeline <- function(config_file="DE_config.yaml", config=NULL) {
   .get_file_timestamped(path, read_yaml, oldobj, check_for_newer)
 }
 
+#' @rdname load_de_pipeline
+#' @param object an object of class seasnap_DE_pipeline
+#' @export
+summary.seasnap_DE_pipeline <- function(object, ...) {
+  cntr <- get_contrasts(object)
 
+  cat("Sea-snap DE pipeline object\n")
+  cat(sprintf(" created on %s\n", object$timestamp))
+  cat(sprintf(" output: %s\n", object$out_path))
+  cat(sprintf(" config: %s\n", object$config_path))
+  cat(sprintf(" file tab: %s\n", object$file_tab_path))
+  cat(sprintf(" design: %s\n", object$config$experiment$design_formula))
+  #cat(sprintf("Pipeline file tab:\n"))
+  #print(object$file_tab)
+
+
+  for(c in names(cntr)) {
+    nsign <- sum(cntr[[c]]$padj < 0.05 & abs(cntr[[c]]$log2FoldChange) > 0.5, na.rm=TRUE)
+    cat(sprintf(" %s: %d significant genes\n", c, nsign))
+  }
+
+}
 
 

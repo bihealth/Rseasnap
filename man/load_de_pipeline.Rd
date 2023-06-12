@@ -3,11 +3,14 @@
 \name{print.seasnap_DE_pipeline}
 \alias{print.seasnap_DE_pipeline}
 \alias{load_de_pipeline}
+\alias{summary.seasnap_DE_pipeline}
 \title{Load a sea-snap DE pipeline from a directory}
 \usage{
 \method{print}{seasnap_DE_pipeline}(x, ...)
 
 load_de_pipeline(config_file = "DE_config.yaml", config = NULL)
+
+\method{summary}{seasnap_DE_pipeline}(object, ...)
 }
 \arguments{
 \item{x}{an object of class seasnap_DE_pipeline}
@@ -19,6 +22,8 @@ load_de_pipeline(config_file = "DE_config.yaml", config = NULL)
 \item{config}{object accessible in R snippets of the DE
 pipeline containing the pipeline configuration and produced files. If tis
 parameter is defined, it overrides the \code{path} parameter.}
+
+\item{object}{an object of class seasnap_DE_pipeline}
 }
 \value{
 seasnap DE pipeline object of class "seasnap_DE_pipeline"

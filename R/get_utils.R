@@ -252,6 +252,7 @@ get_tmod_pca_res <- function(x) {
 #' Get the prcomp object produced by tmod_pca
 #' @param x an object of class seasnap_DE_pipeline
 #' @return data frame with principal components
+#' @importFrom stats prcomp var
 #' @export
 get_tmod_pca_prcomp <- function(x) {
   .check_de_obj(x)
