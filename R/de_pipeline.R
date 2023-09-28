@@ -54,7 +54,8 @@ load_de_pipeline <- function(config_file="DE_config.yaml", config=NULL) {
     pip <- config
     ret$dir <- "."
   } else {
-    pip <- read_yaml(config_file)
+    ret$config_file <- basename(config_file)
+    pip     <- read_yaml(config_file)
     ret$dir <- dirname(config_file)
   }
 
