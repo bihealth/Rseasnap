@@ -405,3 +405,75 @@ get_versions <- function(x) {
 
 }
 
+#' Get all objects from the pipeline
+#'
+#' Get all objects from the pipeline. This function is useful to
+#' get all the objects from the pipeline in one go.
+#' @param x an object of class seasnap_DE_pipeline
+#' @return a list with all the objects
+#' @export
+get_all <- function(x,
+                   file_tab=TRUE,
+                   covar=TRUE,
+                   counts=TRUE,
+                   config=TRUE,
+                   contrasts=TRUE,
+                   exprs=TRUE,
+                   annot=TRUE,
+                   pca=TRUE,
+                   deseq2=TRUE,
+                   prcomp=TRUE,
+                   extensions=TRUE) {
+  .check_de_obj(x)
+  ret <- list()
+  message("Getting all objects from the pipeline...")
+
+  if(file_tab) {
+    message("Getting file table...")
+    ret$file_tab   <- get_file_tab(x)
+  }
+  if(covar) {
+    message("Getting covariates...")
+    ret$covar      <- get_covariates(x)
+  }
+  if(counts) {
+    message("Getting counts...")
+    ret$counts     <- get_counts(x)
+  }
+  if(config) {
+    message("Getting config...")
+    ret$config     <- get_config(x)
+  }
+  if(contrasts) {
+    message("Getting contrasts...")
+    ret$contrasts  <- get_contrasts(x)
+  }
+  if(exprs) {
+    message("Getting exprs...")
+    ret$exprs      <- get_exprs(x)
+  }
+  if(annot) {
+    message("Getting annotation...")
+    ret$annot      <- get_annot(x)
+  }
+  if(pca) {
+    message("Getting pca...")
+    ret$pca        <- get_pca(x)
+  }
+  if(deseq2) {
+    message("Getting deseq2...")
+    ret$deseq2     <- get_deseq2(x)
+  }
+  if(prcomp) {
+    message("Getting prcomp...")
+    ret$steps      <- get_steps(x)
+  }
+  if(extensions) {
+    message("Getting extensions...")
+    ret$extensions <- get_extensions(x)
+  }
+  return(ret)
+}
+
+
+
