@@ -28,6 +28,7 @@ plot_evidence(
   tmod_dbs_obj = NULL,
   tmod_dbs_mapping_obj = NULL,
   annot_obj = NULL,
+  gg = FALSE,
   ...
 )
 
@@ -62,6 +63,8 @@ the largest values at the top of the list.}
 \item{gl}{(optional) gene list object returned by get_tmod_gl (if contrast is a character vector of length 1)}
 
 \item{tmod_dbs_mapping_obj}{the object returned by \code{get_object(x, "tmod_dbs", "mapping.rds")}}
+
+\item{gg}{if TRUE, the plot will be returned as a ggplot object}
 }
 \value{
 Returns invisibly an object of class \code{evidence_plot_data} which

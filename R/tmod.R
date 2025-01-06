@@ -99,6 +99,7 @@ tmod_rev_db_map_ids <- function(x, ids, dbname, tmod_dbs_mapping_obj=NULL) {
 #' @param tmod_dbs_mapping_obj the object returned by `get_object(x, "tmod_dbs", "mapping.rds")`
 #' @param gl (optional) gene list object returned by get_tmod_gl (if contrast is a character vector of length 1)
 #' @param sort which sorting type (must be present in the gene list, don't worry if you don't know what that is)
+#' @param gg if TRUE, the plot will be returned as a ggplot object
 #' @param ... further arguments passed to the tmod::evidencePlot() function
 #' @return Returns invisibly an object of class `evidence_plot_data` which
 #' can be reused to quickly repeat the plot with another gene set ID using the
@@ -107,7 +108,7 @@ tmod_rev_db_map_ids <- function(x, ids, dbname, tmod_dbs_mapping_obj=NULL) {
 #' @export
 plot_evidence <- function(x, id, dbname, contrast, sort="pval", contrast_obj=NULL, gl=NULL, 
   tmod_dbs_obj=NULL,
-  tmod_dbs_mapping_obj=NULL, annot_obj=NULL, ...) {
+  tmod_dbs_mapping_obj=NULL, annot_obj=NULL, gg=FALSE, ...) {
 
   .check_de_obj(x)
 
@@ -194,17 +195,21 @@ plot_evidence <- function(x, id, dbname, contrast, sort="pval", contrast_obj=NUL
     }
   }
 
-  evidencePlot(gl, m=id, mset=mset, gene.colors=colors, gene.labels=gene.labels, ...)
+  if(!gg) {
+    evidencePlot(gl, m=id, mset=mset, gene.colors=colors, gene.labels=gene.labels, ...)
 
-  ret <- list(contrast_obj=contrast_obj, 
-              annot_obj=annot_obj,
-              gl=gl,
-              contrast=contrast,
-              tmod_dbs_obj=tmod_dbs_obj,
-              x=x,
-              dbname=dbname)
-  class(ret) <- c(class(ret), "evidence_plot_data")
-  return(invisible(ret))
+    ret <- list(contrast_obj=contrast_obj, 
+                annot_obj=annot_obj,
+                gl=gl,
+                contrast=contrast,
+                tmod_dbs_obj=tmod_dbs_obj,
+                x=x,
+                dbname=dbname)
+    class(ret) <- c(class(ret), "evidence_plot_data")
+    return(invisible(ret))
+  } else {
+    ggEvidencePlot(gl, m=id, mset=mset, gene.colors=colors, gene.labels=gene.labels, ...)
+  }
 
 }
 
